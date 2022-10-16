@@ -28,9 +28,8 @@ void setup() {
   ESP_ERROR_CHECK(ret);
 
   WifiModule::getInstance().connect("JSH","00000000");
-  // WifiModule::getInstance().
-
-  // MdnsModule::getInstance().mDnsInit("Hello world");
+  
+  MdnsModule::getInstance().mDnsInit("Hello world");
 
 }
 
