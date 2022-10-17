@@ -43,9 +43,6 @@
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
 #endif
 
-const std::string apTag = "wifi ap";
-const std::string staTag = "wifi sta";
-
 static EventGroupHandle_t s_wifi_event_group;
 
 class WifiModule : public Singleton<WifiModule>{

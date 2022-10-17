@@ -5,6 +5,7 @@
 #include <ESP32-audioI2S/Audio.h>
 
 #include "WifiModule.h"
+#include "MdnsModule.h"
 #include "nvs_flash.h"
 
 #include <string.h>
@@ -14,6 +15,8 @@
 #define I2S_LRC       8
 
 void setup() {
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
 
   Serial.begin(115200);
   //Initialize NVS
@@ -24,12 +27,11 @@ void setup() {
   }
   ESP_ERROR_CHECK(ret);
 
-  ESP_LOGI("WIFI ", "ESP_WIFI_MODE_STA");
-
-  WifiModule::getInstance();
+  WifiModule::getInstance().connect("JSH","00000000");
+  
+  MdnsModule::getInstance().mDnsInit("Hello world");
 
 }
 
 void loop() {
-  WifiModule::getInstance().connect("JSH","00000000");
 }
