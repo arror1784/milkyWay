@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 #include "string.h"
-
 #include "WifiModule.h"
 
 WifiModule::WifiModule() {
@@ -97,30 +96,38 @@ bool WifiModule::connect(std::string ssid, std::string passwd) {
 
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
 
+  EventBits_t uxBits = xEventGroupClearBits(
+                             s_wifi_event_group,    // The event group being updated.
+                             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT );// The bits being cleared.
+
+  esp_wifi_disconnect();
+  esp_wifi_connect();
 
   /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
    * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
   EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
                                          WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                         pdFALSE,
+                                         pdTRUE,
                                          pdFALSE,
                                          portMAX_DELAY);
 
   /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
    * happened. */
-  if (bits & WIFI_CONNECTED_BIT) {
+  if (( bits & WIFI_CONNECTED_BIT ) != 0) {
     Serial.printf("connected to ap SSID:%s password:%s\r\n", ssid.data(), passwd.data());
-  } else if (bits & WIFI_FAIL_BIT) {
+    return true;
+  } else if (( bits & WIFI_FAIL_BIT ) != 0) {
     Serial.printf("Failed to connect to SSID:%s, password:%s\r\n", ssid.data(), passwd.data());
+    return false;
   } else {
     Serial.printf("UNEXPECTED EVENT");
+    return false;
   }
   return true;
 }
 
 void WifiModule::disconnect() {
   esp_wifi_disconnect();
-  esp_wifi_clear_fast_connect();
 }
 
 void WifiModule::setApSetting(wifi_config_t wifi_config) {
@@ -131,7 +138,59 @@ void WifiModule::setStaSetting(wifi_config_t wifi_config) {
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
 }
 
+void WifiModule::getApList(){
+  uint16_t number = CONFIG_EXAMPLE_SCAN_LIST_SIZE;
+  wifi_ap_record_t ap_info[CONFIG_EXAMPLE_SCAN_LIST_SIZE];
+  uint16_t ap_count = 0;
+  std::string buf = "";
+  memset(ap_info, 0, sizeof(ap_info));
 
+  esp_wifi_scan_start(NULL, true);
+
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+  Serial.printf("Total APs scanned = %u %u\r\n", ap_count,number);
+  for (int i = 0; (i < number); i++) {
+    buf.append("SSID ");
+    buf.append((char*)ap_info[i].ssid);
+    buf.append("\tRSSI ");
+    buf.append(std::to_string(ap_info[i].rssi));
+    buf.append("\tChannel ");
+    buf.append(std::to_string(ap_info[i].primary));
+      
+    switch (ap_info[i].authmode) {
+      case WIFI_AUTH_OPEN:
+          buf.append("\tAuthmode WIFI_AUTH_OPEN");
+          break;
+      case WIFI_AUTH_WEP:
+          buf.append("\tAuthmode WIFI_AUTH_WEP");
+          break;
+      case WIFI_AUTH_WPA_PSK:
+          buf.append("\tAuthmode WIFI_AUTH_WPA_PSK");
+          break;
+      case WIFI_AUTH_WPA2_PSK:
+          buf.append("\tAuthmode WIFI_AUTH_WPA2_PSK");
+          break;
+      case WIFI_AUTH_WPA_WPA2_PSK:
+          buf.append("\tAuthmode WIFI_AUTH_WPA_WPA2_PSK");
+          break;
+      case WIFI_AUTH_WPA2_ENTERPRISE:
+          buf.append("\tAuthmode WIFI_AUTH_WPA2_ENTERPRISE");
+          break;
+      case WIFI_AUTH_WPA3_PSK:
+          buf.append("\tAuthmode WIFI_AUTH_WPA3_PSK");
+          break;
+      case WIFI_AUTH_WPA2_WPA3_PSK:
+          buf.append("\tAuthmode WIFI_AUTH_WPA2_WPA3_PSK");
+          break;
+      default:
+          buf.append("\tAuthmode WIFI_AUTH_UNKNOWN");
+          break;
+    }
+    buf.append("\r\n");
+  }
+  Serial.print(buf.data());
+}
 
 void wifi_ap_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data){
   if (event_id == WIFI_EVENT_AP_STACONNECTED) {
@@ -149,25 +208,20 @@ void wifi_ap_event_handler(void* arg, esp_event_base_t event_base,int32_t event_
 }
 
 void wifi_sta_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data){
-  static int s_retry_num = 0;
 
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     esp_wifi_connect();
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-    if (s_retry_num < ESP_MAXIMUM_RETRY) {
-      esp_wifi_connect();
-      s_retry_num++;
-      Serial.printf("retry to connect to the AP\r\n");
-    } else {
-      xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-    }
-    Serial.printf("connect to the AP fail\r\n");
+    Serial.printf("disconnect to the AP\r\n");
+    xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+  } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED) {
+    Serial.printf("connect to the AP\r\n");
+    xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
     Serial.printf("got ip:");
     Serial.printf(IPSTR, IP2STR(&event->ip_info.ip));
     Serial.printf("\r\n");
-    s_retry_num = 0;
-    xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
   }
 }
+

@@ -1,12 +1,14 @@
 #include <Arduino.h>
 
-#include "asio.hpp"
-
 #include <ESP32-audioI2S/Audio.h>
+
+#include "http_stream.h"
+
+#include "nvs_flash.h"
 
 #include "WifiModule.h"
 #include "MdnsModule.h"
-#include "nvs_flash.h"
+#include "SimpleWebServer.h"
 
 #include <string.h>
 
@@ -26,10 +28,11 @@ void setup() {
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
-
-  WifiModule::getInstance().connect("JSH","00000000");
-  
+  WifiModule::getInstance();
+  // WifiModule::getInstance().connect("JSH","00000000");  
   MdnsModule::getInstance().mDnsInit("Hello world");
+
+  simpleServerStart();
 
 }
 
