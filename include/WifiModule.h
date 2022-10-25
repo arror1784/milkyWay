@@ -20,10 +20,10 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-#define ESP_MAXIMUM_RETRY  5
+#define WIFI_CONNECTED_BIT ( 1 << 0 )
+#define WIFI_FAIL_BIT      ( 1 << 1 ) 
 
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
+#define CONFIG_EXAMPLE_SCAN_LIST_SIZE 30
 
 #if CONFIG_ESP_WIFI_AUTH_OPEN
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_OPEN
@@ -59,6 +59,9 @@ public:
 
   void setApSetting(wifi_config_t wifi_config);
   void setStaSetting(wifi_config_t wifi_config);
+
+  void getApList();
+
 
 private:
   const std::string _SSID = "MILKY_WAY";
