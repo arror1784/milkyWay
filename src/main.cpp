@@ -2,7 +2,6 @@
 
 #include <ESP32-audioI2S/Audio.h>
 
-#include "audio_type_def.h"
 #include "http_stream.h"
 
 #include "nvs_flash.h"
