@@ -9,66 +9,88 @@
 
 #include <string>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "esp_log.h"
+#include <WiFi.h>
+#include <WebServer.h>
 
-#include "lwip/err.h"
-#include "lwip/sys.h"
+enum EspMode {
+  ACCESS_POINT, STATION
+};
 
-#define WIFI_CONNECTED_BIT ( 1 << 0 )
-#define WIFI_FAIL_BIT      ( 1 << 1 ) 
-
-#define CONFIG_EXAMPLE_SCAN_LIST_SIZE 30
-
-#if CONFIG_ESP_WIFI_AUTH_OPEN
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_OPEN
-#elif CONFIG_ESP_WIFI_AUTH_WEP
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WEP
-#elif CONFIG_ESP_WIFI_AUTH_WPA_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA2_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA_WPA2_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_WPA2_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA3_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA3_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA2_WPA3_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_WPA3_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WAPI_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
-#endif
-
-static EventGroupHandle_t s_wifi_event_group;
+struct ApInfo{
+  String ssid;
+  String bssid;
+  wifi_auth_mode_t encryptionType;
+};
 
 class WifiModule : public Singleton<WifiModule>{
 
 public:
-  WifiModule();
-  ~WifiModule();
+  void start();
 
-  void initApMode(std::string,std::string);
-  void initStaMode();
+  void stopApMode();
 
-  bool connect(std::string ssid, std::string passwd);
-  void disconnect();
+  void connectWifi(const String &ssid, const String &password);
 
-  void setApSetting(wifi_config_t wifi_config);
-  void setStaSetting(wifi_config_t wifi_config);
+  void setApInfo(const String &ssid, const String &password);
 
-  void getApList();
+  EspMode mode() { return _mode; }
 
+  bool isFail() const { return _isFail; }
+
+  bool isConnectedAP() const { return _isConnectedAP; }
+
+  bool isConnectedST() const { return _isConnectedST; }
+
+  void setIp(const String &localIp, const String &gateway, const String &subnet);
+
+  std::vector<ApInfo> getApList();
+
+  IPAddress localIP() { return WiFi.localIP(); }
+
+  IPAddress gateway() { return WiFi.gatewayIP(); }
+
+  IPAddress subnet() { return WiFi.subnetMask(); }
+
+  static std::string getEncryptionStr(wifi_auth_mode_t encryptionType){
+    switch(encryptionType){
+      case WIFI_AUTH_OPEN:
+        return "WIFI_AUTH_OPEN";
+      case WIFI_AUTH_WEP:
+        return "WIFI_AUTH_WEP";
+      case WIFI_AUTH_WPA_PSK:
+        return "WIFI_AUTH_WPA_PSK";
+      case WIFI_AUTH_WPA2_PSK:
+        return "WIFI_AUTH_WPA2_PSK";
+      case WIFI_AUTH_WPA_WPA2_PSK:
+        return "WIFI_AUTH_WPA_WPA2_PSK";
+      case WIFI_AUTH_WPA2_ENTERPRISE:
+        return "WIFI_AUTH_WPA2_ENTERPRISE";
+      case WIFI_AUTH_WPA3_PSK:
+        return "WIFI_AUTH_WPA3_PSK";
+      case WIFI_AUTH_WPA2_WPA3_PSK:
+        return "WIFI_AUTH_WPA2_WPA3_PSK";
+      case WIFI_AUTH_WAPI_PSK:
+        return "WIFI_AUTH_WAPI_PSK";
+      case WIFI_AUTH_MAX:
+        return "WIFI_AUTH_MAX";
+    }
+    return "";
+  }
 
 private:
-  const std::string _SSID = "MILKY_WAY";
-  const std::string _PASSWD = "00000000";
+  String _ssid;
+  String _password;
+
+  EspMode _mode = ACCESS_POINT;
+  bool _isFail = false;
+  bool _isConnectedAP = false;
+  bool _isConnectedST = false;
+
+  IPAddress _localIP;
+  IPAddress _gateway;
+  IPAddress _subnet;
+
 };
 
-void wifi_ap_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
-void wifi_sta_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
 
 #endif //MILKYWAY_WIFIMODULE_H
