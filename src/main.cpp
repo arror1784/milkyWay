@@ -8,15 +8,11 @@
 #include <string.h>
 
 #include <Adafruit_NeoPixel.h>
+#include "Audio.h"
 
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
-
-#include "AudioFileSourceSD.h"
-#include "AudioFileSourceID3.h"
-#include "AudioOutputI2SNoDAC.h"
-#include "AudioGeneratorMP3.h"
 
 #define I2S_DOUT      2
 #define I2S_BCLK      0
@@ -26,10 +22,8 @@ WebServer webServer(80);
 
 Adafruit_NeoPixel pixels(10, 32, NEO_GRBW + NEO_KHZ800);
 
-AudioFileSourceSD *file;
-AudioFileSourceID3 *id3;
-AudioOutputI2SNoDAC *out;
-AudioGeneratorMP3 *mp3;
+Audio audio;
+
 
 inline bool ends_with(std::string const & value, std::string const & ending)
 {
@@ -61,27 +55,6 @@ std::string getEncryptionStr(wifi_auth_mode_t encryptionType){
             return "WIFI_AUTH_MAX";
     }
     return "";
-}
-
-// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
-void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
-{
-  (void)cbData;
-  Serial.printf("ID3 callback for: %s = '", type);
-
-  if (isUnicode) {
-    string += 2;
-  }
-  
-  while (*string) {
-    char a = *(string++);
-    if (isUnicode) {
-      string++;
-    }
-    Serial.printf("%c", a);
-  }
-  Serial.printf("'\n");
-  Serial.flush();
 }
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
@@ -125,51 +98,11 @@ void setup() {
     listDir(SD, "/", 0);
 
 
-    file = new AudioFileSourceSD(); 
-    id3 = NULL; 
-    out = new AudioOutputI2SNoDAC(0);
-    out->SetPinout(I2S_BCLK,I2S_LRC,I2S_DOUT);
+    audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    audio.setVolume(21); // 0...21
 
-    mp3 = new AudioGeneratorMP3();
-    String fileName = "";
-
-    File root = SD.open("/");  
-    File fileOrDir = root.openNextFile();
-    while(fileOrDir){
-        if(fileOrDir.isDirectory()){
-            Serial.print("  DIR : ");
-            Serial.println(fileOrDir.name());
-        }else{
-            Serial.print("  FILE: ");
-            Serial.print(fileOrDir.name());
-            Serial.print("  SIZE: ");
-            Serial.println(fileOrDir.size());
-            if ( ends_with(fileOrDir.name(),".mp3")) {
-                Serial.println("ASdasd");
-                if (file->open(fileOrDir.path())) {
-                    fileName = fileOrDir.name();
-                    break;
-                }
-            }
-        }
-        fileOrDir = root.openNextFile();
-    }
-
-    if (fileName.length() > 0) {
-        id3 = new AudioFileSourceID3(file);
-        id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-        mp3->begin(id3, out);
-        Serial.printf("Playback of '%s' begins...\n", fileName.c_str());
-    } else {
-        Serial.println("Can't find .mp3 file in SPIFFS");
-    }
-
-    pixels.setBrightness(5); // not so bright
-
-    pixels.fill(0xFF0000);
-    pixels.show();
-    out.
-    audioLogger = &Serial;
+//    audio.connecttoFS(SD, "test.mp3");
+    audio.connecttoFS(SD, "/test.mp3");
 
 /*
     // Wi0fiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
@@ -254,10 +187,16 @@ void setup() {
 }
 void loop() {
 //   webServer.handleClient();
-  if (mp3->isRunning()) {
-    if (!mp3->loop()) mp3->stop();
-  } else {
-    Serial.println("MP3 done");
-    delay(1000);
-  }
+    audio.loop();
+
+}
+
+void audio_info(const char *info){
+    Serial.print("info        "); Serial.println(info);
+}
+void audio_id3data(const char *info){  //id3 metadata
+    Serial.print("id3data     "); Serial.println(info);
+}
+void audio_eof_mp3(const char *info){  //end of file
+    Serial.print("eof_mp3     "); Serial.println(info);
 }
