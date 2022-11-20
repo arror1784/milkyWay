@@ -15,12 +15,12 @@
 
 #include "AudioFileSourceSD.h"
 #include "AudioFileSourceID3.h"
-#include "AudioOutputSPDIF.h"
+#include "AudioOutputI2SNoDAC.h"
 #include "AudioGeneratorMP3.h"
 
-#define I2S_DOUT      26
-#define I2S_BCLK      25
-#define I2S_LRC       33
+#define I2S_DOUT      2
+#define I2S_BCLK      0
+#define I2S_LRC       4
 
 WebServer webServer(80);
 
@@ -28,7 +28,7 @@ Adafruit_NeoPixel pixels(10, 32, NEO_GRBW + NEO_KHZ800);
 
 AudioFileSourceSD *file;
 AudioFileSourceID3 *id3;
-AudioOutputSPDIF *out;
+AudioOutputI2SNoDAC *out;
 AudioGeneratorMP3 *mp3;
 
 inline bool ends_with(std::string const & value, std::string const & ending)
@@ -114,7 +114,6 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
     file = root.openNextFile();
   }
 }
-
 void setup() {
     Serial.begin(115200);
     
@@ -128,7 +127,9 @@ void setup() {
 
     file = new AudioFileSourceSD(); 
     id3 = NULL; 
-    out = new AudioOutputSPDIF(26);
+    out = new AudioOutputI2SNoDAC(0);
+    out->SetPinout(I2S_BCLK,I2S_LRC,I2S_DOUT);
+
     mp3 = new AudioGeneratorMP3();
     String fileName = "";
 
@@ -167,7 +168,7 @@ void setup() {
 
     pixels.fill(0xFF0000);
     pixels.show();
-
+    out.
     audioLogger = &Serial;
 
 /*
