@@ -12,10 +12,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-enum EspMode {
-  ACCESS_POINT, STATION
-};
-
 struct ApInfo{
   String ssid;
   String bssid;
@@ -31,15 +27,13 @@ public:
 
   void connectWifi(const String &ssid, const String &password);
 
-  void setApInfo(const String &ssid, const String &password);
+  void disconnectWifi();
 
-  EspMode mode() { return _mode; }
+  void setApInfo(const String &ssid, const String &password);
 
   bool isFail() const { return _isFail; }
 
-  bool isConnectedAP() const { return _isConnectedAP; }
-
-  bool isConnectedST() const { return _isConnectedST; }
+  bool isConnectedST() const { return WiFi.isConnected(); }
 
   void setIp(const String &localIp, const String &gateway, const String &subnet);
 
@@ -81,10 +75,7 @@ private:
   String _ssid;
   String _password;
 
-  EspMode _mode = ACCESS_POINT;
   bool _isFail = false;
-  bool _isConnectedAP = false;
-  bool _isConnectedST = false;
 
   IPAddress _localIP;
   IPAddress _gateway;

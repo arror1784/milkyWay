@@ -10,8 +10,6 @@
 #include "Util.h"
 
 void WifiModule::start() {
-  _mode = ACCESS_POINT;
-
   WiFi.mode(WIFI_MODE_APSTA);
   Serial.print("Setting soft-AP configuration ... ");
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
@@ -21,27 +19,20 @@ void WifiModule::start() {
 
   Serial.print("Soft-AP IP address = ");
   Serial.println(WiFi.softAPIP());
-
-  _isConnectedAP = true;
 }
 
 void WifiModule::stopApMode() {
   WiFi.softAPdisconnect(true);
-  _isConnectedAP = false;
 }
 
 void WifiModule::connectWifi(const String &ssid, const String &password) {
-  _mode = STATION;
-
   WiFi.begin(ssid.c_str(), password.c_str());
 
-  while ((WiFiClass::status() != WL_CONNECTED) && !_isConnectedST) {
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
+  Serial.println("try to connect!");
+}
 
-  Serial.println("Connected!");
-  _isConnectedST = true;
+void WifiModule::disconnectWifi(){
+  WiFi.disconnect();
 }
 
 void WifiModule::setApInfo(const String &ssid, const String &password) {
@@ -54,6 +45,7 @@ void WifiModule::setIp(const String &localIp, const String &gateway, const Strin
   _gateway = Util::stringToIp(gateway);
   _subnet = Util::stringToIp(subnet);
 }
+
 std::vector<ApInfo> WifiModule::getApList(){
   std::vector<ApInfo> list;
 
