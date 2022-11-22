@@ -1,16 +1,11 @@
 //
 // Created by jepanglee on 2022-10-03.
 //
-#include <Arduino.h>
 
 #include "WifiModule.h"
 
-#include "WiFi.h"
-
-#include "Util.h"
-
 void WifiModule::start() {
-  WiFi.mode(WIFI_MODE_APSTA);
+  Serial.println();
   Serial.print("Setting soft-AP configuration ... ");
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
 
@@ -25,10 +20,21 @@ void WifiModule::stopApMode() {
   WiFi.softAPdisconnect(true);
 }
 
-void WifiModule::connectWifi(const String &ssid, const String &password) {
-  WiFi.begin(ssid.c_str(), password.c_str());
+bool WifiModule::connectWifi(const String &ssid, const String &password) {
+  wl_status_t status = WiFi.begin(ssid.c_str(), password.c_str());
 
-  Serial.println("try to connect!");
+  bool isConnected = false;
+
+  for (int i = 0; i < 10; i++) {
+    if(WiFiClass::status() == WL_CONNECTED) {
+      isConnected = true;
+      break;
+    }
+    Serial.println("Connecting to WiFi..");
+    delay(1000);
+  }
+
+  return isConnected;
 }
 
 void WifiModule::disconnectWifi(){

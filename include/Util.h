@@ -1,10 +1,7 @@
 #ifndef ESP32_LIB_UTIL_H
 #define ESP32_LIB_UTIL_H
 
-#include <string>
-#include <vector>
-#include <WString.h>
-#include <IPAddress.h>
+#include "header.h"
 
 class Util {
 public:

@@ -5,17 +5,17 @@
 #ifndef MILKYWAY_WIFIMODULE_H
 #define MILKYWAY_WIFIMODULE_H
 
+#include "Util.h"
 #include "Singleton.h"
-
-#include <string>
-
-#include <WiFi.h>
-#include <WebServer.h>
 
 struct ApInfo{
   String ssid;
   String bssid;
   wifi_auth_mode_t encryptionType;
+};
+
+enum EspMode {
+  ACCESS_POINT, STATION
 };
 
 class WifiModule : public Singleton<WifiModule>{
@@ -25,13 +25,11 @@ public:
 
   void stopApMode();
 
-  void connectWifi(const String &ssid, const String &password);
+  bool connectWifi(const String &ssid, const String &password);
 
   void disconnectWifi();
 
   void setApInfo(const String &ssid, const String &password);
-
-  bool isFail() const { return _isFail; }
 
   bool isConnectedST() const { return WiFi.isConnected(); }
 
@@ -74,8 +72,6 @@ public:
 private:
   String _ssid;
   String _password;
-
-  bool _isFail = false;
 
   IPAddress _localIP;
   IPAddress _gateway;
