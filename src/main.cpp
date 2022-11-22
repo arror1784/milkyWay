@@ -188,7 +188,7 @@ void setup() {
 void loop() {
 //   webServer.handleClient();
     audio.loop();
-
+    Serial.println(audio.getLastGain());
 }
 
 void audio_info(const char *info){
