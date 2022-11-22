@@ -1,8 +1,7 @@
-#include "Websocket.h"
+#include "WebSocketClient.h"
 #include "WifiModule.h"
 
 WebServer webServer(80);
-WebSocket webSocket;
 
 void receiveWifi() {
   if (!webServer.hasArg("plain")) {
@@ -10,7 +9,7 @@ void receiveWifi() {
     return;
   }
   String plainBody = webServer.arg("plain");
-  DynamicJsonDocument doc(plainBody.length());
+  DynamicJsonDocument doc(plainBody.length() * 2);
   deserializeJson(doc, plainBody);
 
   if (doc.containsKey("ssid") && doc.containsKey("password")) {
@@ -28,21 +27,20 @@ void connectSocket() {
     return;
   }
   String plainBody = webServer.arg("plain");
-  DynamicJsonDocument doc(plainBody.length());
+  DynamicJsonDocument doc(plainBody.length() * 2);
   deserializeJson(doc, plainBody);
 
   if (doc.containsKey("host") && doc.containsKey("port") && doc.containsKey("withSSL")) {
-    webSocket.connect(doc["host"], doc["port"], doc["withSSL"] == "true");
-    int isConnected = webSocket.isConnected();
-    Serial.println(isConnected ? "WebSocket Connected!" : "WebSocket Connect Faild!");
-    webServer.send(isConnected ? 200 : 403);
+    Serial.print(bool(doc["withSSL"]));
+    WebSocketClient::getInstance().connect(doc["host"], doc["port"], doc["withSSL"] == "true");
+    webServer.send(200);
   } else {
     webServer.send(400, "text/plain", "wrong json data");
   }
 }
 
 void setup() {
-  WiFiClass::mode(WIFI_MODE_APSTA);
+  WiFiClass::mode(WIFI_MODE_STA);
 
   Serial.begin(115200);
 
@@ -51,16 +49,14 @@ void setup() {
   WifiModule::getInstance().start();
 
   webServer.on("/wifi", HTTP_POST, &receiveWifi);
-  webServer.on("/socket/check", HTTP_GET, &connectSocket);
+  webServer.on("/socket/check", HTTP_POST, &connectSocket);
 
   webServer.begin();
 
-  bool sdStatus = SD.begin(5);
-  if (!sdStatus) {
-    while (1);
-  }
+  SDCard::getInstance().init();
 }
 
 void loop() {
   webServer.handleClient();
+  WebSocketClient::getInstance().loop();
 }

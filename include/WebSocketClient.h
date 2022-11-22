@@ -2,14 +2,23 @@
 // Created by jepanglee on 2022-11-22.
 //
 
-#ifndef MILKYWAY_WEBSOCKET_H
-#define MILKYWAY_WEBSOCKET_H
+#ifndef MILKYWAY_WEB_SOCKET_CLIENT_H
+#define MILKYWAY_WEB_SOCKET_CLIENT_H
 
-#include "header.h"
+#include "SDCard.h"
 
-class WebSocket {
+struct FileInfo {
+  String userId;
+  String filename;
+};
+
+class WebSocketClient : public Singleton<WebSocketClient> {
 public:
+  WebSocketClient();
+
   void connect(const String &host, int port, bool withSSL);
+
+  void loop();
 
   bool isConnected();
 
@@ -27,7 +36,9 @@ private:
   String _uri;
 
   WebSocketsClient _client;
+
+  std::queue<FileInfo> _fileInfoQueue;
 };
 
 
-#endif //MILKYWAY_WEBSOCKET_H
+#endif //MILKYWAY_WEBSOCKETCLIENT_H

@@ -2,14 +2,9 @@
 // Created by jepanglee on 2022-11-22.
 //
 
-#include "WebSocket.h"
+#include "WebSocketClient.h"
 
-void WebSocket::connect(const String &host, int port, bool withSSL) {
-  if (withSSL) {
-    _client.beginSSL(host.c_str(), port);
-  } else {
-    _client.begin(host.c_str(), port);
-  }
+WebSocketClient::WebSocketClient() {
   _client.onEvent([=](WStype_t type, uint8_t * payload, size_t length){
     switch (type) {
       case WStype_ERROR:
@@ -28,42 +23,64 @@ void WebSocket::connect(const String &host, int port, bool withSSL) {
   });
 }
 
-void WebSocket::textMessageReceived(uint8_t *payload, size_t length) {
-
+void WebSocketClient::connect(const String &host, int port, bool withSSL) {
+  if (withSSL) {
+    _client.beginSSL(host.c_str(), port, "/socket");
+  } else {
+    _client.begin(host.c_str(), port, "/socket");
+  }
 }
 
-void WebSocket::binaryMessageReceived(uint8_t *payload, size_t length) {
+void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
+  DynamicJsonDocument doc(length);
+  deserializeJson(doc, payload);
 
+  String strJson;
+  serializeJson(doc, strJson);
+  Serial.println(strJson);
+
+  if(doc["event"] == "SendSound") {
+    _fileInfoQueue.push({
+      .userId = doc["userId"],
+      .filename = doc["filename"]
+    });
+  }
 }
 
-void WebSocket::connected(uint8_t *payload, size_t length) {
+void WebSocketClient::binaryMessageReceived(uint8_t *payload, size_t length) {
+  FileInfo fileInfo = _fileInfoQueue.front();
+  _fileInfoQueue.pop();
+
+  SDCard::getInstance().writeFile(fileInfo.userId + "/", fileInfo.filename, payload);
+}
+
+void WebSocketClient::connected(uint8_t *payload, size_t length) {
   Serial.println("websocket connected");
 
-  JsonObject json = JsonObject();
+  DynamicJsonDocument doc(512);
+  JsonObject json = doc.to<JsonObject>();
   json["event"] = "registerDeviceSession";
   json["name"] = "Kira";
   json["type"] = "Mirror";
 
   String strJson;
-  DynamicJsonDocument jsonDoc = DynamicJsonDocument(json);
-  serializeJson(jsonDoc, strJson);
+  serializeJson(json, strJson);
 
   _client.sendTXT(strJson.c_str());
 }
 
-void WebSocket::disconnected(uint8_t *payload, size_t length) {
+void WebSocketClient::disconnected(uint8_t *payload, size_t length) {
+  Serial.println("websocket disconnected");
+}
+
+void WebSocketClient::errorReceived(uint8_t *payload, size_t length) {
 
 }
 
-void WebSocket::errorReceived(uint8_t *payload, size_t length) {
-  DynamicJsonDocument doc(length);
-  deserializeJson(doc, payload);
-  String strJson;
-  serializeJson(doc, strJson);
-
-  Serial.println(strJson.c_str());
-}
-
-bool WebSocket::isConnected() {
+bool WebSocketClient::isConnected() {
   return _client.isConnected();
+}
+
+void WebSocketClient::loop() {
+  return _client.loop();
 }
