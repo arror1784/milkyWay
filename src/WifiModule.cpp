@@ -5,6 +5,8 @@
 #include "WifiModule.h"
 
 void WifiModule::start() {
+  WiFi.mode(WIFI_MODE_APSTA);
+
   Serial.println();
   Serial.print("Setting soft-AP configuration ... ");
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
@@ -21,7 +23,7 @@ void WifiModule::stopApMode() {
 }
 
 bool WifiModule::connectWifi(const String &ssid, const String &password) {
-  wl_status_t status = WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin(ssid.c_str(), password.c_str());
 
   bool isConnected = false;
 

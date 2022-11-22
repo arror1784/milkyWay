@@ -7,8 +7,8 @@
 #include <vector>
 #include <WString.h>
 #include <IPAddress.h>
+#include <WebSocketsClient.h>
 
-#include "esp_websocket_client.h"
 #include "MdnsModule.h"
 #include "Audio.h"
 #include "FS.h"
