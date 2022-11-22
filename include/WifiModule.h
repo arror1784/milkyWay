@@ -6,7 +6,6 @@
 #define MILKYWAY_WIFIMODULE_H
 
 #include "Util.h"
-#include "Singleton.h"
 
 struct ApInfo{
   String ssid;
@@ -14,18 +13,14 @@ struct ApInfo{
   wifi_auth_mode_t encryptionType;
 };
 
-enum EspMode {
-  ACCESS_POINT, STATION
-};
-
 class WifiModule : public Singleton<WifiModule>{
 
 public:
   void start();
 
-  void stopApMode();
+  void stop();
 
-  bool connectWifi(const String &ssid, const String &password);
+  String connectWifi(const String &ssid, const String &password);
 
   void disconnectWifi();
 

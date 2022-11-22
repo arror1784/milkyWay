@@ -5,9 +5,7 @@
 #ifndef MILKYWAY_MDNSMODULE_H
 #define MILKYWAY_MDNSMODULE_H
 
-#include "Singleton.h"
-
-#include "string"
+#include "header.h"
 
 class MdnsModule : public Singleton<MdnsModule>{
 

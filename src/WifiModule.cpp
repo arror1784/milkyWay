@@ -5,8 +5,6 @@
 #include "WifiModule.h"
 
 void WifiModule::start() {
-  WiFi.mode(WIFI_MODE_APSTA);
-
   Serial.println();
   Serial.print("Setting soft-AP configuration ... ");
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
@@ -18,25 +16,39 @@ void WifiModule::start() {
   Serial.println(WiFi.softAPIP());
 }
 
-void WifiModule::stopApMode() {
+void WifiModule::stop() {
   WiFi.softAPdisconnect(true);
 }
 
-bool WifiModule::connectWifi(const String &ssid, const String &password) {
+String WifiModule::connectWifi(const String &ssid, const String &password) {
   WiFi.begin(ssid.c_str(), password.c_str());
-
-  bool isConnected = false;
 
   for (int i = 0; i < 10; i++) {
     if(WiFiClass::status() == WL_CONNECTED) {
-      isConnected = true;
       break;
     }
-    Serial.println("Connecting to WiFi..");
+    Serial.println("Connecting to WiFi.." + String(i));
     delay(1000);
   }
 
-  return isConnected;
+  switch (WiFiClass::status()) {
+    case WL_NO_SHIELD:
+      return "WL_NO_SHIELD";
+    case WL_IDLE_STATUS:
+      return "WL_IDLE_STATUS";
+    case WL_NO_SSID_AVAIL:
+      return "WL_NO_SSID_AVAIL";
+    case WL_SCAN_COMPLETED:
+      return "WL_SCAN_COMPLETED";
+    case WL_CONNECTED:
+      return "WL_CONNECTED";
+    case WL_CONNECT_FAILED:
+      return "WL_CONNECT_FAILED";
+    case WL_CONNECTION_LOST:
+      return "WL_CONNECTION_LOST";
+    case WL_DISCONNECTED:
+      return "WL_DISCONNECTED";
+  }
 }
 
 void WifiModule::disconnectWifi(){

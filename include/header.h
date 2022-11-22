@@ -8,9 +8,15 @@
 #include <WString.h>
 #include <IPAddress.h>
 #include <WebSocketsClient.h>
+#include <sstream>
+#include <Audio.h>
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <esp_event.h>
+#include <esp_log.h>
+#include <mdns.h>
 
-#include "MdnsModule.h"
-#include "Audio.h"
-#include "FS.h"
-#include "SD.h"
-#include "SPI.h"
+#include "Singleton.h"

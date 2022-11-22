@@ -2,42 +2,48 @@
 #include "WifiModule.h"
 
 WebServer webServer(80);
-WebSocketsClient webSocket;
+WebSocket webSocket;
 
 void receiveWifi() {
   if (!webServer.hasArg("plain")) {
-    webServer.send(400, "text/plain", "no body");
+    webServer.send(400, "text/plain", "no plainBody");
     return;
   }
-  DynamicJsonDocument doc(1024);
-  deserializeJson(doc, webServer.arg("plain"));
+  String plainBody = webServer.arg("plain");
+  DynamicJsonDocument doc(plainBody.length());
+  deserializeJson(doc, plainBody);
 
   if (doc.containsKey("ssid") && doc.containsKey("password")) {
-    bool isConnected = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
-    Serial.println(isConnected ? "Connected!" : "Connect Faild!");
-    webServer.send(isConnected ? 200 : 403);
+    String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
+    Serial.println(status);
+    webServer.send(status == "WL_CONNECTED" ? 200 : 403);
   } else {
     webServer.send(400, "text/plain", "wrong json data");
   }
 }
 
 void connectSocket() {
-  webSocket.beginSSL("wss://kira-api.wimcorp.dev/socket", 443);
-  int status = webSocket.isConnected();
-  webServer.send(200, "text/plain", String("Status Code : ") + String(status));
-  webSocket.onEvent([](WStype_t type, uint8_t *payload, size_t length) {
-    switch (type) {
-      case WStype_TEXT:
-        DynamicJsonDocument doc(1024);
-        deserializeJson(doc, payload);
-        break;
-      case WStype_BIN:
-        break;
-    }
-  });
+  if (!webServer.hasArg("plain")) {
+    webServer.send(400, "text/plain", "no plainBody");
+    return;
+  }
+  String plainBody = webServer.arg("plain");
+  DynamicJsonDocument doc(plainBody.length());
+  deserializeJson(doc, plainBody);
+
+  if (doc.containsKey("host") && doc.containsKey("port") && doc.containsKey("withSSL")) {
+    webSocket.connect(doc["host"], doc["port"], doc["withSSL"] == "true");
+    int isConnected = webSocket.isConnected();
+    Serial.println(isConnected ? "WebSocket Connected!" : "WebSocket Connect Faild!");
+    webServer.send(isConnected ? 200 : 403);
+  } else {
+    webServer.send(400, "text/plain", "wrong json data");
+  }
 }
 
 void setup() {
+  WiFiClass::mode(WIFI_MODE_APSTA);
+
   Serial.begin(115200);
 
   WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
