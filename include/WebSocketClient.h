@@ -16,11 +16,17 @@ class WebSocketClient : public Singleton<WebSocketClient> {
 public:
   WebSocketClient();
 
-  void connect(const String &host, int port, bool withSSL);
+  void connect();
 
   void loop();
 
   bool isConnected();
+
+  void setHost(const String &host);
+
+  void setPort(int port);
+
+  void setWithSsl(bool withSsl);
 
 private:
   void textMessageReceived(uint8_t *payload, size_t length);
@@ -33,7 +39,10 @@ private:
 
   void errorReceived(uint8_t *payload, size_t length);
 
-  String _uri;
+private:
+  String _host = "0.0.0.0";
+  int _port = 80;
+  bool _withSSL = false;
 
   WebSocketsClient _client;
 

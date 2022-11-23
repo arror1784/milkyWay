@@ -4,6 +4,8 @@
 WebServer webServer(80);
 
 void receiveWifi() {
+  WifiModule &wifiModule = WifiModule::getInstance();
+
   if (!webServer.hasArg("plain")) {
     webServer.send(400, "text/plain", "no plainBody");
     return;
@@ -13,7 +15,7 @@ void receiveWifi() {
   deserializeJson(doc, plainBody);
 
   if (doc.containsKey("ssid") && doc.containsKey("password")) {
-    String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
+    String status = wifiModule.connectWifi(doc["ssid"], doc["password"]);
     Serial.println(status);
     webServer.send(status == "WL_CONNECTED" ? 200 : 403);
   } else {
@@ -22,6 +24,8 @@ void receiveWifi() {
 }
 
 void connectSocket() {
+  WebSocketClient &client = WebSocketClient::getInstance();
+
   if (!webServer.hasArg("plain")) {
     webServer.send(400, "text/plain", "no plainBody");
     return;
@@ -31,8 +35,10 @@ void connectSocket() {
   deserializeJson(doc, plainBody);
 
   if (doc.containsKey("host") && doc.containsKey("port") && doc.containsKey("withSSL")) {
-    Serial.print(bool(doc["withSSL"]));
-    WebSocketClient::getInstance().connect(doc["host"], doc["port"], doc["withSSL"] == "true");
+    client.setHost(doc["host"]);
+    client.setPort(doc["port"]);
+    client.setWithSsl(doc["withSSL"]);
+    client.connect();
     webServer.send(200);
   } else {
     webServer.send(400, "text/plain", "wrong json data");
@@ -44,19 +50,22 @@ void setup() {
 
   Serial.begin(115200);
 
-  WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
-  WifiModule::getInstance().setApInfo("MIRROR-0001-Access-Point", "123456789");
-  WifiModule::getInstance().start();
+  WifiModule &wifiModule = WifiModule::getInstance();
+
+  wifiModule.setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
+  wifiModule.setApInfo("Kira", "123456789");
+  wifiModule.start();
 
   webServer.on("/wifi", HTTP_POST, &receiveWifi);
-  webServer.on("/socket/check", HTTP_POST, &connectSocket);
-
+  webServer.on("/socket/connect", HTTP_POST, &connectSocket);
   webServer.begin();
 
   SDCard::getInstance().init();
 }
 
 void loop() {
+  WebSocketClient &webSocketClient = WebSocketClient::getInstance();
+
   webServer.handleClient();
-  WebSocketClient::getInstance().loop();
+  webSocketClient.loop();
 }

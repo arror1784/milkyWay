@@ -41,6 +41,7 @@ String WifiModule::connectWifi(const String &ssid, const String &password) {
     case WL_SCAN_COMPLETED:
       return "WL_SCAN_COMPLETED";
     case WL_CONNECTED:
+      Serial.println(WiFi.localIP());
       return "WL_CONNECTED";
     case WL_CONNECT_FAILED:
       return "WL_CONNECT_FAILED";
