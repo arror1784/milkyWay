@@ -15,6 +15,8 @@ WebSocketClient::WebSocketClient() {
         return connected(payload, length);
       case WStype_TEXT:
         return textMessageReceived(payload, length);
+      case WStype_BIN:
+        return binaryMessageReceived(payload, length);
       default:
         return;
     }
@@ -64,6 +66,17 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
     };
     _fileInfoQueue.push(fileInfo);
   }
+}
+
+void WebSocketClient::binaryMessageReceived(uint8_t *payload, size_t length) {
+  FileInfo fileInfo = _fileInfoQueue.front();
+  _fileInfoQueue.pop();
+
+  Serial.println(fileInfo.filename);
+  Serial.println(fileInfo.userId);
+
+//  SDCard::getInstance().writeFile("/" + fileInfo.userId + "/", fileInfo.filename, payload);
+  SDCard::getInstance().writeFile("/", "Go High.mp3", payload);
 }
 
 void WebSocketClient::connected(uint8_t *payload, size_t length) {
