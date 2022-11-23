@@ -1,7 +1,3 @@
-//
-// Created by jepanglee on 2022-10-03.
-//
-
 #include "WifiModule.h"
 
 void WifiModule::start() {
@@ -50,6 +46,7 @@ String WifiModule::connectWifi(const String &ssid, const String &password) {
     case WL_DISCONNECTED:
       return "WL_DISCONNECTED";
   }
+  return "WL_DISCONNECTED";
 }
 
 void WifiModule::disconnectWifi(){

@@ -1,5 +1,10 @@
+#include <WebServer.h>
+#include <ArduinoJson.h>
+#include <FFat.h>
+
 #include "WebSocketClient.h"
 #include "WifiModule.h"
+#include "SDUtil.h"
 
 WebServer webServer(80);
 
@@ -56,11 +61,14 @@ void setup() {
   wifiModule.setApInfo("Kira", "123456789");
   wifiModule.start();
 
+  String status = wifiModule.connectWifi("Wim", "Wim12345!");
+  Serial.println(status);
+
   webServer.on("/wifi", HTTP_POST, &receiveWifi);
   webServer.on("/socket/connect", HTTP_POST, &connectSocket);
   webServer.begin();
 
-  SDCard::getInstance().init();
+  SDUtil::init();
 }
 
 void loop() {

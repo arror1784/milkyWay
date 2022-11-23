@@ -1,19 +1,23 @@
-//
-// Created by jepanglee on 2022-10-03.
-//
-
 #ifndef MILKYWAY_WIFIMODULE_H
 #define MILKYWAY_WIFIMODULE_H
 
+#include <vector>
+#include <string>
+#include <esp_wifi.h>
+#include <WString.h>
+#include <WiFi.h>
+#include <IPAddress.h>
+
+#include "Singleton.h"
 #include "Util.h"
 
-struct ApInfo{
+struct ApInfo {
   String ssid;
   String bssid;
   wifi_auth_mode_t encryptionType;
 };
 
-class WifiModule : public Singleton<WifiModule>{
+class WifiModule : public Singleton<WifiModule> {
 
 public:
   void start();

@@ -1,23 +1,21 @@
-//
-// Created by jepanglee on 2022-10-03.
-//
-
 #ifndef MILKYWAY_SINGLETON_H
 #define MILKYWAY_SINGLETON_H
 
-template <typename T>
-class Singleton
-{
+template<typename T>
+class Singleton {
 public:
-  static T& getInstance()
-  {
-    static T    instance; // Guaranteed to be destroyed.
+  static T &getInstance() {
+    static T instance; // Guaranteed to be destroyed.
     // Instantiated on first use.
     return instance;
   }
-  Singleton(Singleton const&) = delete;
-  Singleton& operator=(Singleton const&) = delete;
+
+  Singleton(Singleton const &) = delete;
+
+  Singleton &operator=(Singleton const &) = delete;
+
   Singleton() {}
+
   ~Singleton() {}
 
 };

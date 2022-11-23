@@ -1,16 +1,13 @@
-//
-// Created by jepanglee on 2022-11-22.
-//
-
 #ifndef MILKYWAY_WEB_SOCKET_CLIENT_H
 #define MILKYWAY_WEB_SOCKET_CLIENT_H
 
-#include "SDCard.h"
+#include "Singleton.h"
+#include "WebSocketsClient.h"
+#include "SDUtil.h"
 
-struct FileInfo {
-  String userId;
-  String filename;
-};
+#include <ArduinoJson.h>
+#include <WString.h>
+#include <queue>
 
 class WebSocketClient : public Singleton<WebSocketClient> {
 public:
@@ -21,6 +18,12 @@ public:
   void loop();
 
   bool isConnected();
+
+  const String &getHost() const;
+
+  int getPort() const;
+
+  bool isWithSsl() const;
 
   void setHost(const String &host);
 
@@ -45,8 +48,6 @@ private:
   bool _withSSL = false;
 
   WebSocketsClient _client;
-
-  std::queue<FileInfo> _fileInfoQueue;
 };
 
 

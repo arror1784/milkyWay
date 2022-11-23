@@ -1,7 +1,3 @@
-//
-// Created by jepanglee on 2022-11-22.
-//
-
 #include "WebSocketClient.h"
 
 WebSocketClient::WebSocketClient() {
@@ -39,6 +35,18 @@ bool WebSocketClient::isConnected() {
   return _client.isConnected();
 }
 
+const String &WebSocketClient::getHost() const {
+  return _host;
+}
+
+int WebSocketClient::getPort() const {
+  return _port;
+}
+
+bool WebSocketClient::isWithSsl() const {
+  return _withSSL;
+}
+
 void WebSocketClient::setHost(const String &host) {
   _host = host;
 }
@@ -60,23 +68,16 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
 //  Serial.println(strJson);
 
   if(doc["event"] == "SendSound") {
-    FileInfo fileInfo = {
-        .userId = doc["userId"],
-        .filename = doc["filename"]
-    };
-    _fileInfoQueue.push(fileInfo);
+    String protocol = _withSSL ? "https://" : "http://";
+    long id = doc["id"];
+    String filename = doc["filename"];
+    String url = protocol + _host + ":" + _port + "/api/file/" + id + "/" + filename;
+
+    SDUtil::writeFile(url, id, filename);
   }
 }
 
 void WebSocketClient::binaryMessageReceived(uint8_t *payload, size_t length) {
-  FileInfo fileInfo = _fileInfoQueue.front();
-  _fileInfoQueue.pop();
-
-  Serial.println(fileInfo.filename);
-  Serial.println(fileInfo.userId);
-
-//  SDCard::getInstance().writeFile("/" + fileInfo.userId + "/", fileInfo.filename, payload);
-  SDCard::getInstance().writeFile("/", "Go High.mp3", payload);
 }
 
 void WebSocketClient::connected(uint8_t *payload, size_t length) {

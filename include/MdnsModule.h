@@ -5,12 +5,17 @@
 #ifndef MILKYWAY_MDNSMODULE_H
 #define MILKYWAY_MDNSMODULE_H
 
-#include "header.h"
+#include <string>
+#include <mdns.h>
+#include <Arduino.h>
 
-class MdnsModule : public Singleton<MdnsModule>{
+#include "Singleton.h"
+
+class MdnsModule : public Singleton<MdnsModule> {
 
 public:
   MdnsModule();
+
   ~MdnsModule();
 
   void mDnsInit(std::string name);

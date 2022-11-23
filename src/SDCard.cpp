@@ -1,18 +1,36 @@
-#include "SDCard.h"
+#include "SDUtil.h"
 
-void SDCard::init() {
+void SDUtil::init() {
   bool sdStatus = SD.begin(5);
   if (!sdStatus) {
     while (1);
   }
 }
 
-bool SDCard::writeFile(const String& path, const String& filename, uint8_t *data) {
-  File file = SD_MMC.open(path + filename, FILE_WRITE);
-  if (!file) {
-    return false;
+bool SDUtil::writeFile(const String &downloadUrl, long id, const String &filename) {
+  SD_MMC.begin();
+  FILE *file = fopen(("/" + String(id) + "_" + filename).c_str(), "ab");
+
+  HTTPClient httpClient;
+  httpClient.addHeader("master-key",
+                       "mWznEn6fPiqQWFSEbXonWGk^!&eEL7M*GyK$b56BB6Je*RVCPfxgyb7VQi!vVuUYeL%YBwAPsZ95*GTtAecgsR54GaCNN3Z8kt9SvHP2cSWms7uRyM^Gi!NKMzzq8*5*");
+  httpClient.begin(downloadUrl);
+  WiFiClient *stream = httpClient.getStreamPtr();
+
+  // Download data and write into SD card
+  size_t downloadedDataSize = 0;
+  const size_t audioSize = httpClient.getSize();
+  while (downloadedDataSize < audioSize) {
+    size_t availableDataSize = stream->available();
+    if (availableDataSize > 0) {
+      auto *audioData = (uint8_t *) malloc(availableDataSize);
+      stream->readBytes(audioData, availableDataSize);
+      write(fileno(file), audioData, availableDataSize);
+      downloadedDataSize += availableDataSize;
+      free(audioData);
+    }
   }
-  file.print(*data);
-  file.close();
-  return true;
+
+  fclose(file);
+  SD_MMC.end();
 }
