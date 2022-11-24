@@ -14,6 +14,8 @@ public:
   static void init();
 
   static bool writeFile(const String &downloadUrl, long id, const String &filename);
+
+  static String authenticationToken_;
 };
 
 #endif //MILKYWAY_SDUTIL_H

@@ -35,18 +35,6 @@ bool WebSocketClient::isConnected() {
   return _client.isConnected();
 }
 
-const String &WebSocketClient::getHost() const {
-  return _host;
-}
-
-int WebSocketClient::getPort() const {
-  return _port;
-}
-
-bool WebSocketClient::isWithSsl() const {
-  return _withSSL;
-}
-
 void WebSocketClient::setHost(const String &host) {
   _host = host;
 }
@@ -60,14 +48,18 @@ void WebSocketClient::setWithSsl(bool withSsl) {
 }
 
 void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
+  NeoPixel &neoPixel = NeoPixel::getInstance();
+
   DynamicJsonDocument doc(length);
   deserializeJson(doc, payload);
 
-//  String strJson;
-//  serializeJson(doc, strJson);
-//  Serial.println(strJson);
+  if (doc.containsKey("authenticationToken")) {
+    SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
+    neoPixel.setLightEffectId(doc["selectedLightEffectId"]);
+    neoPixel.setLightEffects(doc["lightEffects"]);
+  }
 
-  if(doc["event"] == "SendSound") {
+  if (doc["event"] == "SendSound") {
     String protocol = _withSSL ? "https://" : "http://";
     long id = doc["id"];
     String filename = doc["filename"];
@@ -97,20 +89,8 @@ void WebSocketClient::connected(uint8_t *payload, size_t length) {
 
 void WebSocketClient::disconnected(uint8_t *payload, size_t length) {
   Serial.println("websocket disconnected");
-  DynamicJsonDocument doc(length);
-  deserializeJson(doc, payload);
-
-  String strJson;
-  serializeJson(doc, strJson);
-  Serial.println(strJson);
 }
 
 void WebSocketClient::errorReceived(uint8_t *payload, size_t length) {
   Serial.println("websocket errorReceived");
-  DynamicJsonDocument doc(length);
-  deserializeJson(doc, payload);
-
-  String strJson;
-  serializeJson(doc, strJson);
-  Serial.println(strJson);
 }

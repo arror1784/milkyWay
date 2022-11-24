@@ -1,5 +1,7 @@
 #include "SDUtil.h"
 
+String SDUtil::authenticationToken_;
+
 void SDUtil::init() {
   bool sdStatus = SD.begin(5);
   if (!sdStatus) {
@@ -12,8 +14,7 @@ bool SDUtil::writeFile(const String &downloadUrl, long id, const String &filenam
   FILE *file = fopen(("/" + String(id) + "_" + filename).c_str(), "ab");
 
   HTTPClient httpClient;
-  httpClient.addHeader("master-key",
-                       "mWznEn6fPiqQWFSEbXonWGk^!&eEL7M*GyK$b56BB6Je*RVCPfxgyb7VQi!vVuUYeL%YBwAPsZ95*GTtAecgsR54GaCNN3Z8kt9SvHP2cSWms7uRyM^Gi!NKMzzq8*5*");
+  httpClient.addHeader("Authorization", String("Bearer ") + authenticationToken_);
   httpClient.begin(downloadUrl);
   WiFiClient *stream = httpClient.getStreamPtr();
 
@@ -33,4 +34,6 @@ bool SDUtil::writeFile(const String &downloadUrl, long id, const String &filenam
 
   fclose(file);
   SD_MMC.end();
+
+  return true;
 }

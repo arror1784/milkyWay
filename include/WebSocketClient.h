@@ -3,6 +3,7 @@
 
 #include "Singleton.h"
 #include "WebSocketsClient.h"
+#include "NeoPixel.h"
 #include "SDUtil.h"
 
 #include <ArduinoJson.h>
@@ -18,12 +19,6 @@ public:
   void loop();
 
   bool isConnected();
-
-  const String &getHost() const;
-
-  int getPort() const;
-
-  bool isWithSsl() const;
 
   void setHost(const String &host);
 
