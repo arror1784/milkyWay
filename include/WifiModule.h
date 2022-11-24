@@ -42,8 +42,8 @@ public:
 
   IPAddress subnet() { return WiFi.subnetMask(); }
 
-  static std::string getEncryptionStr(wifi_auth_mode_t encryptionType){
-    switch(encryptionType){
+  static std::string getEncryptionStr(wifi_auth_mode_t encryptionType) {
+    switch (encryptionType) {
       case WIFI_AUTH_OPEN:
         return "WIFI_AUTH_OPEN";
       case WIFI_AUTH_WEP:

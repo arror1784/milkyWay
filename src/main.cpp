@@ -66,21 +66,26 @@ void runNeoPixel() {
     } else {
       neoPixel.on();
     }
-  } else if (lightEffect.mode == ELightMode::Breathing) {
+  }
+  else if (lightEffect.mode == ELightMode::Breathing) {
     neoPixel.setIsColorChange(false);
     if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
       neoPixel.increaseBrightness();
-    } else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
+    }
+    else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
       neoPixel.lowerBrightness();
     }
-  } else if (lightEffect.mode == ELightMode::ColorChange) {
+  }
+  else if (lightEffect.mode == ELightMode::ColorChange) {
     neoPixel.setIsColorChange(true);
     if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
       neoPixel.increaseBrightness();
-    } else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
+    }
+    else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
       neoPixel.lowerBrightness();
     }
-  } else if (lightEffect.mode == ELightMode::Mixed) {
+  }
+  else if (lightEffect.mode == ELightMode::Mixed) {
 
   }
 }

@@ -31,12 +31,7 @@ void NeoPixel::lowerBrightness() {
   if (brightness == 0) {
     _dimmingStatus = EDimmingStatus::UP;
     if (_isColorChange) {
-      LightEffect lightEffect = getCurrentLightEffect();
-      std::vector<long> keys;
-      for (auto colorSet : lightEffect.colorSets) {
-        keys.push_back(colorSet.first);
-      }
-      setColorSetId(keys[random(keys.size())]);
+      setRandomColorSetId();
     }
   }
   _strip.show();
@@ -69,17 +64,50 @@ EDimmingStatus NeoPixel::getDimmingStatus() const {
   return _dimmingStatus;
 }
 
-void NeoPixel::setLightEffectId(int lightEffectId) {
-  _lightEffectId = lightEffectId;
+void NeoPixel::setLightEffectId(ELightMode mode) {
+  for (auto lightEffect: _lightEffects) {
+    if (lightEffect.second->mode == mode) {
+      _lightEffectId = lightEffect.first;
+    }
+  }
 }
 
-void NeoPixel::setColorSetId(int colorSetId) {
-  _colorSetId = colorSetId;
+void NeoPixel::setRandomColorSetId() {
+  LightEffect lightEffect = getCurrentLightEffect();
+  std::vector<long> keys;
+  for (auto colorSet : lightEffect.colorSets) {
+    keys.push_back(colorSet.first);
+  }
+  _colorSetId = keys[random(keys.size())];
 }
 
-void NeoPixel::setLightEffects(const JsonArray &jsonArray) {
-  bool isFirstColorSet = true;
+void NeoPixel::setLightEffect(const JsonObject &jsonLightEffect) {
+  long id = jsonLightEffect["id"];
 
+  if (_lightEffects[id] == nullptr) return;
+
+  LightEffect *lightEffect = _lightEffects[id];
+
+  lightEffect->id = jsonLightEffect["id"];
+
+  for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
+    auto colorSet = new ColorSet();
+
+    colorSet->id = jsonColorSet["id"];
+
+    for (String color: JsonArray(jsonColorSet["colors"])) {
+      colorSet->colors.push_back(Util::stringToRGBW(color));
+    }
+    lightEffect->colorSets.insert({colorSet->id, colorSet});
+  }
+
+  lightEffect->mode = Util::stringToELightMode(jsonLightEffect["mode"]);
+  lightEffect->isRandomColor = jsonLightEffect["isRandomColor"];
+  lightEffect->speed = jsonLightEffect["speed"];
+  lightEffect->isRandomSpeed = jsonLightEffect["isRandomSpeed"];
+}
+
+void NeoPixel::setLightEffects(const JsonArray &jsonLightEffects) {
   for (auto lightEffect: _lightEffects) {
     for (auto colorSet: lightEffect.second->colorSets) {
       delete colorSet.second;
@@ -87,32 +115,10 @@ void NeoPixel::setLightEffects(const JsonArray &jsonArray) {
     delete lightEffect.second;
   }
 
-  for (JsonObject jsonLightEffect: jsonArray) {
-    auto lightEffect = new LightEffect();
-
-    lightEffect->id = jsonLightEffect["id"];
-
-    for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
-      auto colorSet = new ColorSet();
-
-      colorSet->id = jsonColorSet["id"];
-
-      for (String color: JsonArray(jsonColorSet["colors"])) {
-        colorSet->colors.push_back(Util::stringToRGBW(color));
-      }
-      lightEffect->colorSets.insert({colorSet->id, colorSet});
-
-      if (isFirstColorSet) {
-        isFirstColorSet = false;
-        setColorSetId(colorSet->id);
-      }
-    }
-    lightEffect->mode = Util::stringToELightMode(jsonLightEffect["mode"]);
-    lightEffect->isRandomColor = jsonLightEffect["isRandomColor"];
-    lightEffect->speed = jsonLightEffect["speed"];
-    lightEffect->isRandomSpeed = jsonLightEffect["isRandomSpeed"];
-
-    _lightEffects.insert({lightEffect->id, lightEffect});
+  for (JsonObject jsonLightEffect: jsonLightEffects) {
+    long id = jsonLightEffect["id"];
+    _lightEffects.insert({id, new LightEffect()});
+    setLightEffect(jsonLightEffect);
   }
 }
 

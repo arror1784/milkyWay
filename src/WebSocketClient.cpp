@@ -55,11 +55,14 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
 
   if (doc.containsKey("authenticationToken")) {
     SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
-    neoPixel.setLightEffectId(doc["selectedLightEffectId"]);
     neoPixel.setLightEffects(doc["lightEffects"]);
+    neoPixel.setLightEffectId(Util::stringToELightMode(doc["userMode"]["lightMode"]));
+    neoPixel.setRandomColorSetId();
   }
-
-  if (doc["event"] == "SendSound") {
+  else if (doc["event"] == "SendLightEffect") {
+    neoPixel.setLightEffect(doc["data"]);
+  }
+  else if (doc["event"] == "SendSound") {
     String protocol = _withSSL ? "https://" : "http://";
     long id = doc["id"];
     String filename = doc["filename"];

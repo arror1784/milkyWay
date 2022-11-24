@@ -54,11 +54,13 @@ public:
   // 디밍 상태를 반환한다.
   EDimmingStatus getDimmingStatus() const;
 
-  void setLightEffectId(int lightEffectId);
+  void setLightEffectId(ELightMode mode);
 
-  void setColorSetId(int colorSetId);
+  void setRandomColorSetId();
 
-  void setLightEffects(const JsonArray &jsonArray);
+  void setLightEffect(const JsonObject &json);
+
+  void setLightEffects(const JsonArray &jsonLightEffects);
 
   void setIsColorChange(bool isColorChange);
 
