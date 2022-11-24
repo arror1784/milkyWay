@@ -67,13 +67,19 @@ void runNeoPixel() {
       neoPixel.on();
     }
   } else if (lightEffect.mode == ELightMode::Breathing) {
+    neoPixel.setIsColorChange(false);
     if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
       neoPixel.increaseBrightness();
     } else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
       neoPixel.lowerBrightness();
     }
   } else if (lightEffect.mode == ELightMode::ColorChange) {
-
+    neoPixel.setIsColorChange(true);
+    if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
+      neoPixel.increaseBrightness();
+    } else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
+      neoPixel.lowerBrightness();
+    }
   } else if (lightEffect.mode == ELightMode::Mixed) {
 
   }
@@ -98,7 +104,7 @@ void setup() {
 
   // 네오픽셀 실행용 엔드포인트
   webServer.on("/led", HTTP_POST, [=]() {
-    timer.setInterval(100, runNeoPixel);
+    timer.setInterval(30, runNeoPixel);
     webServer.send(200);
   });
 

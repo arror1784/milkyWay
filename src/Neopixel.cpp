@@ -4,7 +4,7 @@ int16_t NeoPixel::pin_ = 32;
 
 int NeoPixel::ledCount_ = 20;
 
-const int NeoPixel::maxBright_ = 30;
+const int NeoPixel::maxBright_ = 10;
 
 NeoPixel::NeoPixel(uint16_t ledCount, int16_t pin) : _strip(ledCount, pin, NEO_GRBW) {
   _strip.begin();
@@ -30,6 +30,14 @@ void NeoPixel::lowerBrightness() {
 
   if (brightness == 0) {
     _dimmingStatus = EDimmingStatus::UP;
+    if (_isColorChange) {
+      LightEffect lightEffect = getCurrentLightEffect();
+      std::vector<long> keys;
+      for (auto colorSet : lightEffect.colorSets) {
+        keys.push_back(colorSet.first);
+      }
+      setColorSetId(keys[random(keys.size())]);
+    }
   }
   _strip.show();
 }
@@ -106,6 +114,10 @@ void NeoPixel::setLightEffects(const JsonArray &jsonArray) {
 
     _lightEffects.insert({lightEffect->id, lightEffect});
   }
+}
+
+void NeoPixel::setIsColorChange(bool isColorChange) {
+  NeoPixel::_isColorChange = isColorChange;
 }
 
 void NeoPixel::updatePixelColor() {

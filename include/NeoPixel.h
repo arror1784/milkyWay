@@ -60,6 +60,8 @@ public:
 
   void setLightEffects(const JsonArray &jsonArray);
 
+  void setIsColorChange(bool isColorChange);
+
   // 싱글톤 객체 레퍼런스를 반환한다.
   static NeoPixel &getInstance() {
     static NeoPixel instance(ledCount_, pin_);
@@ -79,6 +81,7 @@ private:
   int _lightEffectId = 0;
   int _colorSetId = 0;
   EDimmingStatus _dimmingStatus = EDimmingStatus::UP;
+  bool _isColorChange = false;
 
   Adafruit_NeoPixel _strip;
   std::map<long, LightEffect *> _lightEffects;

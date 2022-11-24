@@ -50,7 +50,7 @@ void WebSocketClient::setWithSsl(bool withSsl) {
 void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
   NeoPixel &neoPixel = NeoPixel::getInstance();
 
-  DynamicJsonDocument doc(length);
+  DynamicJsonDocument doc(length * 2);
   deserializeJson(doc, payload);
 
   if (doc.containsKey("authenticationToken")) {
