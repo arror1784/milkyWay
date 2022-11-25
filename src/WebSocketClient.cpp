@@ -66,7 +66,7 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
     String protocol = _withSSL ? "https://" : "http://";
     long id = doc["id"];
     String filename = doc["filename"];
-    String url = protocol + _host + ":" + _port + "/api/file/" + id + "/" + filename;
+    String url = protocol + _host + ":" + _port + "/api/file/" + filename;
 
     SDUtil::writeFile(url, id, filename);
   }
