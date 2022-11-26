@@ -1,5 +1,44 @@
 #include "WebSocketClient.h"
 
+class Sound {
+public:
+  String filename;
+  long size;
+};
+
+class Playlist {
+public:
+  long id;
+  bool isShuffle;
+  std::vector<Sound *> sounds;
+};
+
+Playlist playlist;
+
+void parsePlayList(const JsonObject& data) {
+  playlist.id = data["id"];
+  playlist.isShuffle = data["isShuffle"];
+  for (auto sound: playlist.sounds) {
+    delete sound;
+  }
+  for (auto jsonSound: JsonArray(data["sounds"])) {
+    auto *sound = new Sound();
+    sound->filename = String(jsonSound["filename"]);
+    sound->size = jsonSound["size"];
+
+    playlist.sounds.push_back(sound);
+  }
+
+//    Serial.println(String("Playlist id: ") + playlist.id);
+//    Serial.println(String("Playlist isShuffle: ") + playlist.isShuffle);
+//
+//
+//    for (auto sound: playlist.sounds) {
+//        Serial.println(String("Playlist Send filename: ") + sound->filename);
+//        Serial.println(String("Playlist Send size: ") + sound->size);
+//    }
+}
+
 WebSocketClient::WebSocketClient() {
   _client.onEvent([=](WStype_t type, uint8_t * payload, size_t length){
     switch (type) {
@@ -53,6 +92,7 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
 
   if (doc.containsKey("authenticationToken")) {
     SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
+    parsePlayList(doc["playlist"]);
   }
   else if (doc["event"] == "SendLightEffect") {
   }
@@ -63,6 +103,9 @@ void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
     String url = protocol + _host + ":" + _port + "/api/file/" + filename;
 
     SDUtil::writeFile(url, id, filename);
+  }
+  else if (doc["event"] == "SendPlaylist") {
+    parsePlayList(doc["data"]);
   }
 }
 
