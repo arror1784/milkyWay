@@ -20,7 +20,7 @@ void Neopixel::plotColorSet(long colorSetIndex, uint8_t br) {
 
     for (int i = 0; i < _nLed; i++) {
         if (colorSetIndex == -1) {
-            _strip.setPixelColor(i, black__);
+            _strip.setPixelColor(i, black_);
         }
         else {
             c = lightEffect.colorSets[colorSetIndex]->colors[i];
@@ -100,7 +100,7 @@ void Neopixel::blink(int blinks, unsigned int time)
         plotColorSet(colorSetIndex);
         delelOrTaskDelay(time);
 
-        plotColorSet(blackColorSetIndex__);
+        plotColorSet(blackColorSetIndex_);
         delelOrTaskDelay(time);
     }
 }

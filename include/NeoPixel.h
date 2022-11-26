@@ -24,6 +24,12 @@ public:
     bool isRandomSpeed;
 };
 
+enum class NeoPixelMQEvents{
+  UPDATE_MODE = 0,
+  UPDATE_EFFECT = 1
+};
+
+
 class Neopixel {
 public:
     Neopixel(int nLed, int pin, neoPixelType type,boolean isTask=false);
@@ -60,11 +66,8 @@ private:
     const int _delayPartition = 255;
     const int _maxBright = 255;
 
-    static const uint32_t black__;
-    static const int blackColorSetIndex__;
+    static const uint32_t black_ = 0x00000000;
+    static const int blackColorSetIndex_ = -1;
 };
-
-const uint32_t Neopixel::black__ = 0x00000000;
-const int Neopixel::blackColorSetIndex__ = -1;
 
 #endif //ESP32_LIB_NEOPIXEL_H+
