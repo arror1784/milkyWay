@@ -126,6 +126,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+CMakeListsPrivate.txt
 
 ### CMake Patch ###
 # External projects

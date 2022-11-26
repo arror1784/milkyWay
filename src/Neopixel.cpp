@@ -11,73 +11,80 @@ void Neopixel::begin()
     _strip.show();
 }
 
-void Neopixel::plotPattern(int patternNum, uint8_t br)
-{
+void Neopixel::plotColorSet(long colorSetIndex, uint8_t br) {
+    LightEffect lightEffect = currentLightEffect();
+
     uint32_t c;
     uint8_t r, g, b;
-    if (patternNum < -1 || patternNum >= getPresetLength())
-        return;
+    if (colorSetIndex < -1 || colorSetIndex >= lightEffect.colorSets.size()) return;
+
     for (int i = 0; i < _nLed; i++) {
-        if (patternNum == -1) {
-            _strip.setPixelColor(i, BLACK);
-        } else {
-            c = _colorPreSet[patternNum][i];
+        if (colorSetIndex == -1) {
+            _strip.setPixelColor(i, black__);
+        }
+        else {
+            c = lightEffect.colorSets[colorSetIndex]->colors[i];
             r = (c & 0x00FF0000) >> 16;
             g = (c & 0x0000FF00) >> 8;
             b = (c & 0x000000FF);
-            c = (r * br / MAX_BR) << 16 |
-                (g * br / MAX_BR) << 8 |
-                (b * br / MAX_BR);
+            c = (r * br / _maxBright) << 16 |
+                (g * br / _maxBright) << 8 |
+                (b * br / _maxBright);
             _strip.setPixelColor(i, c);
         }
     }
     _strip.show();
 }
 
+void Neopixel::plotColorSet(long colorSetIndex) {
+    plotColorSet(colorSetIndex, _maxBright);
+}
+
 void Neopixel::colorChange(int changes, unsigned time)
 {
-    int prevPatternIndex = -1, currentPatternIndex;
-    uint32_t c;
-    uint8_t r, g, b;
+    LightEffect lightEffect = currentLightEffect();
+
+    int prevcolorSetIndex = -1;
+    int currentcolorSetIndex;
     
     for (int i = 0; i < changes; i++) {
-        if (prevPatternIndex == -1) {
-            currentPatternIndex = random(getPresetLength());
-        } else {
-            currentPatternIndex = random(getPresetLength() - 1);
-            if (currentPatternIndex >= prevPatternIndex) currentPatternIndex++;
+        if (prevcolorSetIndex == -1) {
+            currentcolorSetIndex = random(lightEffect.colorSets.size());
         }
-        
-        for (int j = 0; j < DELAY_PARTITION / 2; j++) {
-            plotPattern(currentPatternIndex, MAX_BR * j * 2 / DELAY_PARTITION);
-            delelOrTaskDelay(time / DELAY_PARTITION);
-        }
-        
-        for (int j = DELAY_PARTITION / 2; j < DELAY_PARTITION; j++) {
-            plotPattern(currentPatternIndex, MAX_BR * (DELAY_PARTITION - j - 1) * 2 / DELAY_PARTITION);
-            delelOrTaskDelay(time / DELAY_PARTITION);
+        else {
+            currentcolorSetIndex = random(lightEffect.colorSets.size() - 1);
+            if (currentcolorSetIndex >= prevcolorSetIndex) currentcolorSetIndex++;
         }
 
-        prevPatternIndex = currentPatternIndex;
+        for (int j = 0; j < _delayPartition / 2; j++) {
+            plotColorSet(currentcolorSetIndex, _maxBright * j * 2 / _delayPartition);
+            delelOrTaskDelay(time / _delayPartition);
+        }
+
+        for (int j = _delayPartition / 2; j < _delayPartition; j++) {
+            plotColorSet(currentcolorSetIndex, _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
+            delelOrTaskDelay(time / _delayPartition);
+        }
+
+        prevcolorSetIndex = currentcolorSetIndex;
     }
 }
 
 void Neopixel::dim(int dims, unsigned int time)
 {
-    int patternIndex = random(getPresetLength());
-    uint32_t c;
-    uint8_t r, g, b;
+    LightEffect lightEffect = currentLightEffect();
+    int colorSetIndex = random(lightEffect.colorSets.size());
 
     for (int i = 0; i < dims; i++) {
 
-        for (int j = 0; j < DELAY_PARTITION / 2; j++) {
-            plotPattern(patternIndex, MAX_BR * j * 2 / DELAY_PARTITION);
-            delelOrTaskDelay(time / DELAY_PARTITION);
+        for (int j = 0; j < _delayPartition / 2; j++) {
+            plotColorSet(colorSetIndex, _maxBright * j * 2 / _delayPartition);
+            delelOrTaskDelay(time / _delayPartition);
         }
 
-        for (int j = DELAY_PARTITION / 2; j < DELAY_PARTITION; j++) {
-            plotPattern(patternIndex, MAX_BR * (DELAY_PARTITION - j - 1) * 2 / DELAY_PARTITION);
-            delelOrTaskDelay(time / DELAY_PARTITION);
+        for (int j = _delayPartition / 2; j < _delayPartition; j++) {
+            plotColorSet(colorSetIndex, _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
+            delelOrTaskDelay(time / _delayPartition);
         }
 
         delelOrTaskDelay(500);
@@ -86,29 +93,66 @@ void Neopixel::dim(int dims, unsigned int time)
 
 void Neopixel::blink(int blinks, unsigned int time)
 {
-    int patternIndex = random(getPresetLength());
+    LightEffect lightEffect = currentLightEffect();
+    int colorSetIndex = random(lightEffect.colorSets.size());
 
     for (int i = 0; i < blinks; i++) {
-        plotPattern(patternIndex);
+        plotColorSet(colorSetIndex);
         delelOrTaskDelay(time);
 
-        plotPattern(PATTERN_INDEX_BLACK);
+        plotColorSet(blackColorSetIndex__);
         delelOrTaskDelay(time);
     }
 }
 
-void Neopixel::pushColorPreset(std::vector<uint32_t>& preset){
-    _colorPreSet.push_back(preset);
-}
-void Neopixel::clearColorPreset(){
-    _colorPreSet.clear();
+void Neopixel::initData(const JsonObject &registerDeviceRes) {
+    setLightEffects(registerDeviceRes["lightEffects"]);
+    _mode = Util::stringToELightMode(registerDeviceRes["userMode"]["lightMode"]);
 }
 
-void Neopixel::delelOrTaskDelay(uint32_t time){
+void Neopixel::setLightEffects(const JsonArray &jsonLightEffects) {
+    for (JsonObject jsonLightEffect: jsonLightEffects) {
+        ELightMode mode = Util::stringToELightMode(jsonLightEffect["mode"]);
+
+        LightEffect *lightEffect;
+
+        if (mode == Breathing) lightEffect = &_breathingLightEffect;
+        if (mode == Blinking) lightEffect = &_blinkingLightEffect;
+        if (mode == ColorChange) lightEffect = &_colorChangeLightEffect;
+
+        lightEffect->id = jsonLightEffect["id"];
+
+        for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
+            auto colorSet = new ColorSet();
+
+            colorSet->id = jsonColorSet["id"];
+
+            for (String color: JsonArray(jsonColorSet["colors"])) {
+                colorSet->colors.push_back(Util::stringToRGBW(color));
+            }
+            lightEffect->colorSets.push_back(colorSet);
+        }
+
+        lightEffect->mode = Util::stringToELightMode(jsonLightEffect["mode"]);
+        lightEffect->isRandomColor = jsonLightEffect["isRandomColor"];
+        lightEffect->speed = jsonLightEffect["speed"];
+        lightEffect->isRandomSpeed = jsonLightEffect["isRandomSpeed"];
+    }
+}
+
+const LightEffect &Neopixel::currentLightEffect() {
+    if (_mode == Breathing) return _breathingLightEffect;
+    if (_mode == Blinking) return _blinkingLightEffect;
+    if (_mode == ColorChange) return _colorChangeLightEffect;
+}
+
+void Neopixel::delelOrTaskDelay(uint32_t time) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
-    if(_isTask)
-        xTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(time));
-    else
+    if (_isTask) {
+        xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(time));
+    }
+    else {
         delay(time);
+    }
 }
