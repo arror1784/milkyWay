@@ -2,95 +2,43 @@
 #define ESP32_LIB_NEOPIXEL_H
 
 #include <Adafruit_NeoPixel.h>
-#include <ArduinoJson.h>
-#include <map>
+#include <vector>
 
-#include "Util.h"
-#include "SimpleTimer.h"
+#define MAX_LED 50
 
-enum class EDimmingStatus {
-  UP, DOWN
-};
+#define MAX_BR 255
+#define DELAY_PARTITION 255
 
-class ColorSet {
+#define BLACK 0x00000000
+#define PATTERN_INDEX_BLACK -1
+
+class Neopixel {
 public:
-  long id;
-  std::vector<uint32_t> colors;
-};
+    Neopixel(int nLed, int pin, neoPixelType type,boolean isTask=false);
+    void begin();
+    void plotPattern(int patternNum, uint8_t br = MAX_BR);
+    void colorChange(int changes, unsigned time);
+    void dim(int dims, unsigned int time);
+    void blink(int blinks, unsigned int time);
 
-class LightEffect {
-public:
-  long id;
-  std::map<long, ColorSet *> colorSets;
-  ELightMode mode = ELightMode::Blinking;
-  bool isRandomColor;
-  long speed;
-  bool isRandomSpeed;
-};
+    void pushColorPreset(std::vector<uint32_t>&);
+    void clearColorPreset();
 
-class NeoPixel {
-public:
-  // 최대 밝기로 킨다.
-  void on();
-
-  // 끈다.
-  void off();
-
-  // 발기를 낮춘다, 0에 도달하면 디밍 상태를 UP으로 바꾼다.
-  void lowerBrightness();
-
-  // 밝기를 높힌다. 최대 밝기에 도달하면 디빙 상태를 DOWN으로 바꾼다.
-  void increaseBrightness();
-
-  // 현재 최대 밝기인지 확인한다.
-  bool isOn() const;
-
-  // 사용할 빛 효과가 유효한지 검증한다.
-  bool isCurrentLightEffectValid();
-
-  // 사용할 빛 효과를 반환한다.
-  const LightEffect &getCurrentLightEffect();
-
-  // 디밍 상태를 반환한다.
-  EDimmingStatus getDimmingStatus() const;
-
-  void setLightEffectId(ELightMode mode);
-
-  void setRandomColorSetId();
-
-  void setLightEffect(const JsonObject &json);
-
-  void setLightEffects(const JsonArray &jsonLightEffects);
-
-  void setIsColorChange(bool isColorChange);
-
-  // 싱글톤 객체 레퍼런스를 반환한다.
-  static NeoPixel &getInstance() {
-    static NeoPixel instance(ledCount_, pin_);
-
-    return instance;
-  }
-
-  static void setPin(int16_t pin);
-
-  static void setLedCount(int ledCount);
+    int getPresetLength(){return _colorPreSet.size();};
 
 private:
-  NeoPixel(uint16_t nLed, int16_t pin);
+    void delelOrTaskDelay(uint32_t time);
 
-  void updatePixelColor();
+private:
+    Adafruit_NeoPixel _strip;
+    int _pin;
+    std::vector<std::vector<uint32_t>> _colorPreSet;
 
-  int _lightEffectId = 0;
-  int _colorSetId = 0;
-  EDimmingStatus _dimmingStatus = EDimmingStatus::UP;
-  bool _isColorChange = false;
+    int _selectColorPreset;
+    int _nLed;
+    int _nPattern;
 
-  Adafruit_NeoPixel _strip;
-  std::map<long, LightEffect *> _lightEffects;
-
-  static int16_t pin_;
-  static int ledCount_;
-  static const int maxBright_;
+    boolean _isTask = false;
 };
 
-#endif //ESP32_LIB_NEOPIXEL_H
+#endif //ESP32_LIB_NEOPIXEL_H+

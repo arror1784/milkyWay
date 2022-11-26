@@ -1,11 +1,20 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <FFat.h>
+// #include <Arduino_FreeRTOS.h>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
 #include "SDUtil.h"
 #include "SimpleTimer.h"
+#include "Audio.h"
+
+#define LED_PIN 32
+#define LED_LENGTH 21
+
+#define I2S_DOUT      2
+#define I2S_BCLK      0
+#define I2S_LRC       4
 
 WebServer webServer(80);
 SimpleTimer timer;
@@ -51,43 +60,36 @@ void connectSocket() {
   }
 }
 
-void runNeoPixel() {
-  NeoPixel &neoPixel = NeoPixel::getInstance();
+void neoPixelTask(void* parms) {
 
-  if (!neoPixel.isCurrentLightEffectValid()) {
-    return;
-  }
+    Neopixel neopixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800,true);
+    std::vector<uint32_t> preset;
+    for(int i = 0;i < LED_LENGTH; i++){
+      preset.push_back(0xffffff);
+    }
+    neopixel.pushColorPreset(preset);
 
-  auto lightEffect = neoPixel.getCurrentLightEffect();
+    while(1){
+      neopixel.dim(10,500);
 
-  if (lightEffect.mode == ELightMode::Blinking) {
-    if (neoPixel.isOn()) {
-      neoPixel.off();
-    } else {
-      neoPixel.on();
     }
-  }
-  else if (lightEffect.mode == ELightMode::Breathing) {
-    neoPixel.setIsColorChange(false);
-    if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
-      neoPixel.increaseBrightness();
-    }
-    else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
-      neoPixel.lowerBrightness();
-    }
-  }
-  else if (lightEffect.mode == ELightMode::ColorChange) {
-    neoPixel.setIsColorChange(true);
-    if (neoPixel.getDimmingStatus() == EDimmingStatus::UP) {
-      neoPixel.increaseBrightness();
-    }
-    else if (neoPixel.getDimmingStatus() == EDimmingStatus::DOWN) {
-      neoPixel.lowerBrightness();
-    }
-  }
-  else if (lightEffect.mode == ELightMode::Mixed) {
+    vTaskDelete(NULL);
 
+}
+
+void audioTask(void* parms){
+
+  Audio audio;
+
+  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+  audio.setVolume(21); // 0...21
+  
+  audio.connecttoFS(SD, "/test.mp3");
+
+  while(1){
+    audio.loop();
   }
+  vTaskDelete(NULL);
 }
 
 void setup() {
@@ -100,7 +102,7 @@ void setup() {
   wifiModule.setApInfo("Kira", "123456789");
   wifiModule.start();
 
-  String status = wifiModule.connectWifi("Wim", "Wim12345!");
+  // String status = wifiModule.connectWifi("Wim", "Wim12345!");
 
   webServer.on("/wifi", HTTP_POST, &receiveWifi);
   webServer.on("/socket/connect", HTTP_POST, &connectSocket);
@@ -109,18 +111,17 @@ void setup() {
 
   // 네오픽셀 실행용 엔드포인트
   webServer.on("/led", HTTP_POST, [=]() {
-    timer.setInterval(30, runNeoPixel);
     webServer.send(200);
   });
 
   webServer.begin();
 
-  NeoPixel::setPin(32);
-  NeoPixel::setLedCount(20);
+  TaskHandle_t xNeoPixelHandle = NULL;
+  TaskHandle_t xAudioHandle = NULL;
 
-  NeoPixel &neoPixel = NeoPixel::getInstance();
+  xTaskCreate(neoPixelTask,"neoPixelTask",10000,NULL,0,&xNeoPixelHandle);
+  xTaskCreate(audioTask,"audioTask",100000,NULL,0,&xAudioHandle);
 
-  neoPixel.off();
 }
 
 void loop() {

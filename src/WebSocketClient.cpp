@@ -48,19 +48,13 @@ void WebSocketClient::setWithSsl(bool withSsl) {
 }
 
 void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
-  NeoPixel &neoPixel = NeoPixel::getInstance();
-
   DynamicJsonDocument doc(length * 2);
   deserializeJson(doc, payload);
 
   if (doc.containsKey("authenticationToken")) {
     SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
-    neoPixel.setLightEffects(doc["lightEffects"]);
-    neoPixel.setLightEffectId(Util::stringToELightMode(doc["userMode"]["lightMode"]));
-    neoPixel.setRandomColorSetId();
   }
   else if (doc["event"] == "SendLightEffect") {
-    neoPixel.setLightEffect(doc["data"]);
   }
   else if (doc["event"] == "SendSound") {
     String protocol = _withSSL ? "https://" : "http://";
