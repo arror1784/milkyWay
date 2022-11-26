@@ -30,13 +30,4 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-<<<<<<< HEAD
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/WifiModule.cpp include/WifiModule.h include/Singleton.h src/MdnsModule.cpp include/MdnsModule.h)
-=======
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/WifiModule.cpp include/WifiModule.h include/Singleton.h 
-                    src/MdnsModule.cpp include/MdnsModule.h include/rapidjson/* lib/esp-adf-libs/esp_codec/include/codec/audio_type_def.h)
-
-
-include_directories("/home/jsh/workspace/milkyWay/lib/esp-adf-libs/esp_codec/include/codec")
-
->>>>>>> ffa1352... test build sucess
+add_executable(Z_DUMMY_TARGET ${SRC_LIST})

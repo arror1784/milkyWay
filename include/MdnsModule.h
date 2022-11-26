@@ -1,18 +1,17 @@
-//
-// Created by jepanglee on 2022-10-03.
-//
-
 #ifndef MILKYWAY_MDNSMODULE_H
 #define MILKYWAY_MDNSMODULE_H
 
+#include <string>
+#include <mdns.h>
+#include <Arduino.h>
+
 #include "Singleton.h"
 
-#include "string"
-
-class MdnsModule : public Singleton<MdnsModule>{
+class MdnsModule : public Singleton<MdnsModule> {
 
 public:
   MdnsModule();
+
   ~MdnsModule();
 
   void mDnsInit(std::string name);
