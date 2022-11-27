@@ -6,16 +6,23 @@
 #include "WebSocketClient.h"
 #include "WifiModule.h"
 #include "SDUtil.h"
+#include "SEN0153.h"
 
 static const String host = "192.168.219.112";
 static const int port = 6001;
 static const bool ssl = false;
 
+static const uint8_t send0153Address =  SEN0153_ADDRESS_DEFAULT;
+static const int8_t sen0153RX = 16;
+static const int8_t sen0153TX = 17;
+
 WebSocketClient wsClient;
 WebServer webServer(80);
+SEN0153 ult(sen0153RX, sen0153TX, SEN0153_BAUD_RATE_DEFAULT);
+
+int distance = 0;
 
 void receiveWifi() {
-
     if (!webServer.hasArg("plain")) {
         webServer.send(400, "text/plain", "no plainBody");
         return;
@@ -128,4 +135,9 @@ void setup() {
 void loop() {
     webServer.handleClient();
     wsClient.loop();
+
+    uint16_t distance = ult.readDistance(send0153Address);
+    if () {
+
+    }
 }
