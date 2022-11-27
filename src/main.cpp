@@ -143,6 +143,13 @@ void setup() {
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
         WebSocketClient::parsePlayList(doc["playlist"]);
+
+        String protocol = ssl ? "https://" : "http://";
+        long id = doc["id"];
+        String filename = doc["filename"];
+        String url = protocol + host + ":" + port + "/api/sound/file/" + "GO" + "%20" + "High.mp3";
+
+        SDUtil::downloadFile(url,49,"GO High.mp3");
       }
       else if (doc["event"] == "SendLightEffect") {
       }
@@ -150,7 +157,7 @@ void setup() {
         String protocol = ssl ? "https://" : "http://";
         long id = doc["id"];
         String filename = doc["filename"];
-        String url = protocol + host + ":" + port + "/api/file/" + filename;
+        String url = protocol + host + ":" + port + "/api/sound/file/" + filename;
 
         SDUtil::downloadFile(url, id, filename);
       }

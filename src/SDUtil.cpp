@@ -29,30 +29,38 @@ String SDUtil::getSerial(){
 
 bool SDUtil::downloadFile(const String &downloadUrl, long id, const String &filename) {
     // FILE file = fopen(("/" + String(id) + "_" + filename).c_str(), "ab");
+    Serial.println(downloadUrl);
     File file = SD.open(("/" + String(id) + "_" + filename).c_str(), FILE_WRITE);
 
     HTTPClient httpClient;
     httpClient.addHeader("Authorization", String("Bearer ") + authenticationToken_);
     httpClient.begin(downloadUrl);
-    WiFiClient *stream = httpClient.getStreamPtr();
 
-    // Download data and write into SD card
-    size_t downloadedDataSize = 0;
-    const size_t audioSize = httpClient.getSize();
-    while (downloadedDataSize < audioSize) {
-        size_t availableDataSize = stream->available();
-        if (availableDataSize > 0) {
-            auto *audioData = (uint8_t *) malloc(availableDataSize);
-            stream->readBytes(audioData, availableDataSize);
-            // write(fileno(file), audioData, availableDataSize);
-            file.write(audioData, availableDataSize);
-            downloadedDataSize += availableDataSize;
-            free(audioData);
-        }
+    int httpCode = httpClient.GET();
+    if(httpCode == HTTP_CODE_OK){
+
+      WiFiClient *stream = httpClient.getStreamPtr();
+      // Download data and write into SD card
+      size_t downloadedDataSize = 0;
+      const size_t audioSize = httpClient.getSize();
+      while (downloadedDataSize < audioSize) {
+          size_t availableDataSize = stream->available();
+          if (availableDataSize > 0) {
+              auto *audioData = (uint8_t *) malloc(availableDataSize);
+              stream->readBytes(audioData, availableDataSize);
+              // write(fileno(file), audioData, availableDataSize);
+              file.write(audioData, availableDataSize);
+              downloadedDataSize += availableDataSize;
+              free(audioData);
+          }
+      }
+    }else{
+      Serial.println("http get fail");
     }
 
-   file.close();
-    
+    file.close();
+    Serial.println("download file finish");
+
     return true;
 }
 bool SDUtil::writeFile(const String &path,const String &data){
