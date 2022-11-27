@@ -8,6 +8,7 @@
 String SDUtil::authenticationToken_;
 
 const String SDUtil::wifiInfoPath_ = "/WIFI";
+
 const String SDUtil::serialPath_ = "/SERIAL";
 
 void SDUtil::init() {
@@ -24,7 +25,6 @@ String SDUtil::getSerial() {
     }
     return _serial;
 }
-
 
 bool SDUtil::downloadFile(const String &api, long userId, const String &filename) {
     String parsedFileName = String(filename);

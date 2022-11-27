@@ -3,9 +3,7 @@
 
 #include "Singleton.h"
 #include "WebSocketsClient.h"
-#include "NeoPixel.h"
 #include "SDUtil.h"
-#include "AudioControl.h"
 
 #include <ArduinoJson.h>
 #include <WString.h>
@@ -41,44 +39,6 @@ public:
   void onDisconnected(webSocketReceiveCB cb){_webSockectReceiveDisconnected = cb;};
 
   void onErrorReceived(webSocketReceiveCB cb){_webSockectReceiveError = cb;};
-
-  static Playlist parsePlayList(const JsonObject& data) {
-    Playlist playlist;
-    playlist.id = data["id"];
-    playlist.isShuffle = data["isShuffle"];
-    playlist.sounds.clear();
-    for (auto jsonSound: JsonArray(data["sounds"])) {
-      Sound sound;
-      sound.filename = String(jsonSound["filename"]);
-      sound.size = jsonSound["size"];
-
-      playlist.sounds.push_back(sound);
-    }
-    return playlist;
-  }
-  static LightEffect parseLightEffect(const JsonObject& jsonLightEffect) {
-    LightEffect lightEffect;
-
-    lightEffect.id = jsonLightEffect["id"];
-
-    lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
-    lightEffect.isRandomColor = jsonLightEffect["isRandomColor"];
-    lightEffect.speed = jsonLightEffect["speed"];
-    lightEffect.isRandomSpeed = jsonLightEffect["isRandomSpeed"];
-
-    for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
-        ColorSet colorSet;
-
-        colorSet.id = jsonColorSet["id"];
-
-        for (String color: JsonArray(jsonColorSet["colors"])) {
-            colorSet.colors.push_back(Util::stringToRGBW(color));
-        }
-        lightEffect.colorSets.push_back(colorSet);
-    }
-
-    return lightEffect;
-  }
 
 private:
   String _host = "0.0.0.0";

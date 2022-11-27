@@ -51,6 +51,7 @@ void WebSocketClient::setPort(int port) {
 void WebSocketClient::setWithSsl(bool withSsl) {
   _withSSL = withSsl;
 }
+
 void WebSocketClient::sendText(String txt){
     _client.sendTXT(txt.c_str());
 }
