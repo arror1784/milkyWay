@@ -17,65 +17,51 @@ void SDUtil::init() {
     }
 }
 
-String SDUtil::getSerial(){
-  if(_serial.length() == 0){
-    _serial = SDUtil::readFile(SDUtil::serialPath_);
-    Serial.println("Asdasd");
-    Serial.println(SDUtil::serialPath_);
-  }
-  return _serial;
+String SDUtil::getSerial() {
+    if (_serial.length() == 0) {
+        _serial = SDUtil::readFile(SDUtil::serialPath_);
+        Serial.println(SDUtil::serialPath_);
+    }
+    return _serial;
 }
 
 
-bool SDUtil::downloadFile(const String &downloadUrl, long id, const String &filename) {
-    // FILE file = fopen(("/" + String(id) + "_" + filename).c_str(), "ab");
-    Serial.println(downloadUrl);
-    File file = SD.open(("/" + String(id) + "_" + filename).c_str(), FILE_WRITE);
+bool SDUtil::downloadFile(const String &api, long userId, const String &filename) {
+    String parsedFileName = String(filename);
+    parsedFileName.replace(" ", "%20");
+
+    String url = api + parsedFileName;
+
+    Serial.println(url);
 
     HTTPClient httpClient;
+    httpClient.begin(url);
     httpClient.addHeader("Authorization", String("Bearer ") + authenticationToken_);
-    httpClient.begin(downloadUrl);
 
     int httpCode = httpClient.GET();
-    if(httpCode == HTTP_CODE_OK){
+    if (httpCode == HTTP_CODE_OK) {
+        File file = SD.open(("/" + String(userId) + "_" + filename).c_str(), FILE_WRITE);
 
-      WiFiClient *stream = httpClient.getStreamPtr();
-      // Download data and write into SD card
-      size_t downloadedDataSize = 0;
-      const size_t audioSize = httpClient.getSize();
-      while (downloadedDataSize < audioSize) {
-          size_t availableDataSize = stream->available();
-          if (availableDataSize > 0) {
-              auto *audioData = (uint8_t *) malloc(availableDataSize);
-              stream->readBytes(audioData, availableDataSize);
-              // write(fileno(file), audioData, availableDataSize);
-              file.write(audioData, availableDataSize);
-              downloadedDataSize += availableDataSize;
-              free(audioData);
-          }
-      }
-    }else{
-      Serial.println("http get fail");
+        httpClient.writeToStream(&file);
+
+        file.close();
+
+        Serial.println("download file finish");
+        return true;
     }
-
-    file.close();
-    Serial.println("download file finish");
-
-    return true;
+    Serial.println("http get fail : " + String(httpCode));
+    return false;
 }
-bool SDUtil::writeFile(const String &path,const String &data){
-    File file = SD.open(path,FILE_WRITE);
 
-    if(file.write((uint8_t*)data.c_str(),data.length()) == 0)
-      return false;
-    else return true;
+bool SDUtil::writeFile(const String &path, const String &data) {
+    File file = SD.open(path, FILE_WRITE);
 
+    return file.write((uint8_t *) data.c_str(), data.length()) != 0;
 }
 
 String SDUtil::readFile(const String &path) {
-    
     File file = SD.open(path);
-    if(!file || file.isDirectory()){
+    if (!file || file.isDirectory()) {
         Serial.println("− failed to open file for reading");
         return "";
     }
@@ -83,6 +69,7 @@ String SDUtil::readFile(const String &path) {
 }
 
 bool SDUtil::exists(const String &path) {
-    return exists(path);
+    File file = SD.open(path);
+    return !!file;
 }
 
