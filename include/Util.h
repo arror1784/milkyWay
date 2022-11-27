@@ -10,7 +10,7 @@
 #include <IPAddress.h>
 
 enum class ELightMode {
-  Breathing = 0, Blinking = 1, ColorChange = 3, Mixed, Sync, N
+  Breathing = 0, Blinking = 1, ColorChange = 3, Mixed, Sync, None
 };
 
 enum class EDeviceType {
@@ -44,6 +44,7 @@ public:
   static EOperationMode stringToEOperationMode(const String &string);
 
   static uint32_t stringToRGBW(const String &string);
+
 };
 
 

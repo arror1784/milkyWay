@@ -51,16 +51,15 @@ void Neopixel::colorChange(int changes, unsigned time)
     int currentcolorSetIndex;
     
     for (int i = 0; i < changes; i++) {
-        if (prevcolorSetIndex == -1) {
-            currentcolorSetIndex = random(_colorChangeLightEffect.colorSets.size());
-        }
-        else {
-            currentcolorSetIndex = random(_colorChangeLightEffect.colorSets.size() - 1);
-            if (currentcolorSetIndex >= prevcolorSetIndex) currentcolorSetIndex++;
-        }
 
+        while(1){
+            currentcolorSetIndex = random(_colorChangeLightEffect.colorSets.size());
+            if(prevcolorSetIndex != currentcolorSetIndex)
+                break;
+            
+        }
         for (int j = 0; j < _delayPartition / 2; j++) {
-            plotColorSet(_colorChangeLightEffect, _maxBright * j * 2 / _delayPartition);
+            plotColorSet(_colorChangeLightEffect,currentcolorSetIndex, _maxBright * j * 2 / _delayPartition);
             delelOrTaskDelay(time / _delayPartition);
         }
 
@@ -126,7 +125,10 @@ void Neopixel::delelOrTaskDelay(uint32_t time) {
 }
 
 void Neopixel::loop() {
-
+    if(!_enable){
+        delelOrTaskDelay(100);
+        return;
+    }
     switch (_mode)
     {
         case ELightMode::Blinking :
@@ -156,10 +158,6 @@ void Neopixel::loop() {
             return;
         case ELightMode::Sync :
 
-            return;
-        case ELightMode::N :
-            colorChange(-1,100);
-            delelOrTaskDelay(20);
             return;
         default:
             return;

@@ -50,7 +50,7 @@ public:
     for (auto jsonSound: JsonArray(data["sounds"])) {
       Sound sound;
       sound.filename = String(jsonSound["filename"]);
-      sound.size = jsonSound["size"];
+      sound.id = jsonSound["id"];
 
       playlist.sounds.push_back(sound);
     }

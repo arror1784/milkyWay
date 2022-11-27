@@ -26,7 +26,7 @@ String SDUtil::getSerial() {
 }
 
 
-bool SDUtil::downloadFile(const String &api, long userId, const String &filename) {
+bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     String parsedFileName = String(filename);
     parsedFileName.replace(" ", "%20");
 
@@ -36,11 +36,11 @@ bool SDUtil::downloadFile(const String &api, long userId, const String &filename
 
     HTTPClient httpClient;
     httpClient.begin(url);
-    httpClient.addHeader("Authorization", String("Bearer ") + authenticationToken_);
+    httpClient.addHeader("Authorization", String("Bearer ") + SDUtil::authenticationToken_);
 
     int httpCode = httpClient.GET();
     if (httpCode == HTTP_CODE_OK) {
-        File file = SD.open(("/" + String(userId) + "_" + filename).c_str(), FILE_WRITE);
+        File file = SD.open((String(id) + "_" + filename).c_str(), FILE_WRITE);
 
         httpClient.writeToStream(&file);
 

@@ -11,7 +11,7 @@ public:
 
   String getSerial();
 
-  static bool downloadFile(const String &api, long userId, const String &filename);
+  static bool downloadFile(const String &api, int id, const String &filename);
   static bool writeFile(const String &path,const String &data);
   static String readFile(const String &path);
   static bool  exists(const String &path);

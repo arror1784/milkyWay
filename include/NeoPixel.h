@@ -41,6 +41,8 @@ public:
     
     void loop();
 
+    void setEnable(bool enable){_enable = enable;};
+
 private:
     void delelOrTaskDelay(uint32_t time);
 
@@ -61,7 +63,8 @@ private:
     LightEffect _blinkingLightEffect;
     LightEffect _colorChangeLightEffect;
 
-    ELightMode _mode = ELightMode::N;
+    ELightMode _mode = ELightMode::None;
+    bool _enable = true;
 
     int _colorSetId = 0;
 

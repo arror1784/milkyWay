@@ -30,4 +30,4 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/AudioMsgQueue.cpp include/AudioMsgQueue.h src/NeoPixelMsgQueue.cpp include/NeoPixelMsgQueue.h)
+add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/AudioMsgQueue.cpp include/AudioMsgQueue.h src/NeoPixelMsgQueue.cpp include/NeoPixelMsgQueue.h src/UserModeControl.cpp include/UserModeControl.h)

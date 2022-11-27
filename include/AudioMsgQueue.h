@@ -9,7 +9,7 @@
 #include "AudioControl.h"
 
 enum class AudioMQEvents{
-  UPDATE_MODE = 0,
+  UPDATE_ENABLE = 0,
   UPDATE_PLAYLIST = 1
 };
 
@@ -17,6 +17,7 @@ class AudioMsgData{
 public:
     Playlist list;
     AudioMQEvents events;
+    bool enable = true;
 };
 
 class AudioMsgQueue : public MsgQueue<AudioMsgData> {

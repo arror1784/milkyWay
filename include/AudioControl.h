@@ -6,7 +6,7 @@
 class Sound {
 public:
   String filename;
-  long size;
+  int id;
 };
 
 class Playlist {
@@ -24,14 +24,19 @@ public:
     void setVolume(uint8_t volume);
 
     void setPlayList(Playlist& list);
-
+    void setEnable(bool enable){_enable = enable;};
+    
+    void playNext();
+    
     void loop();
 
 private:
     Audio _audio;
 
     int _volume = 10;
-    int _listIndex = 0;
+    int _listIndex = 1;
+
+    bool _enable = false;
 
     Playlist _playList;
     

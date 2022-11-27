@@ -9,6 +9,7 @@
 #include "SDUtil.h"
 #include "AudioControl.h"
 #include "NeoPixel.h"
+#include "UserModeControl.h"
 
 #include "AudioMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
@@ -22,6 +23,8 @@
 
 #define SOCKET_SUCESS_BIT   (1UL << 0UL) // zero shift for bit0
 #define SOCKET_FAIL_BIT   (1UL << 1UL) // 1 shift for flag  bit 1
+
+#define SUFFLE_TIMEOUT 5500
 
 static const String host = "192.168.219.112";
 static const int port = 6001;
@@ -40,9 +43,9 @@ void neoPixelTask(void* parms) {
           neopixel.setLightEffects(msg->list);
         }else if(msg->events == NeoPixelMQEvents::UPDATE_MODE){
           neopixel.changeMode(msg->mode);
+        }else if(msg->events == NeoPixelMQEvents::UPDATE_ENABLE){
+          neopixel.setEnable(msg->enable);
         }
-        Serial.println("asdasddas");
-
         delete msg;
       }
       neopixel.loop();
@@ -58,14 +61,54 @@ void audioTask(void* parms){
   while(1){
     AudioMsgData* msg = audioMsgQueue.recv();
     if(msg != nullptr){
-      auto& list = msg->list;
-      
-      audioControl.setPlayList(list);
+
+      if(msg->events == AudioMQEvents::UPDATE_PLAYLIST){
+        auto& list = msg->list;
+        audioControl.setPlayList(list);
+        audioControl.playNext();
+      }else if(msg->events == AudioMQEvents::UPDATE_ENABLE){
+        audioControl.setEnable(msg->enable);
+      }
 
       delete msg;
     }
+    Serial.println("FFFFFFFFFFFF");
     audioControl.loop();
   }
+  vTaskDelete(NULL);
+}
+
+void shuffleTast(void* parm){
+  bool i = true;
+  while (1)
+  {
+    if(UserModeControl::getInstance().interactionMode != EInteractionMode::Shuffle)
+      break;
+
+      AudioMsgData* dataA = new AudioMsgData();
+      dataA->list = Playlist();
+      dataA->events = AudioMQEvents::UPDATE_ENABLE;
+      
+
+      NeoPixelMsgData* dataN = new NeoPixelMsgData();
+      dataN->list = LightEffect();
+      dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+      dataN->mode = ELightMode::None;
+
+      if(i){
+        i = false;
+        dataA->enable = false;
+        dataN->enable = true;
+      }else{
+        i = true;
+        dataA->enable = true;
+        dataN->enable = false;
+      }
+      TickType_t xLastWakeTime = xTaskGetTickCount();
+
+      xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(SUFFLE_TIMEOUT));
+  }
+  
   vTaskDelete(NULL);
 }
 
@@ -146,7 +189,7 @@ void setup() {
       Serial.println(String(payload,length));
       
       DynamicJsonDocument doc(length * 2);
-      deserializeJson(doc, payload);
+      Serial.print(deserializeJson(doc, payload,length).c_str());
 
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
@@ -165,7 +208,7 @@ void setup() {
           NeoPixelMsgData* dataN = new NeoPixelMsgData();
           dataN->list = WebSocketClient::parseLightEffect(array[i]);
           dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
-          dataN->mode = ELightMode::N;
+          dataN->mode = ELightMode::None ;
 
           neoPixelMsgQueue.send(dataN);
 
@@ -175,7 +218,6 @@ void setup() {
         dataN->list = LightEffect();
         dataN->events = NeoPixelMQEvents::UPDATE_MODE;
         dataN->mode = Util::stringToELightMode(doc["userMode"]["lightMode"]);
-        Serial.println(String(doc["userMode"]["lightMode"]));
 
         neoPixelMsgQueue.send(dataN);
         
@@ -183,19 +225,125 @@ void setup() {
         // doc["interactionMode"];
 
       }else if (doc["event"] == "SendLightEffect") {
-      
+        JsonArray array = doc["data"];
+
+        for(int i = 0; i < array.size(); i++){
+
+          NeoPixelMsgData* dataN = new NeoPixelMsgData();
+          dataN->list = WebSocketClient::parseLightEffect(array[i]);
+          dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+          dataN->mode = ELightMode::None;
+
+          neoPixelMsgQueue.send(dataN);
+
+        }
       }else if (doc["event"] == "SendSound") {
         JsonObject data = doc["data"];
 
         String protocol = ssl ? "https://" : "http://";
         long userId = data["userId"];
+        int id = data["id"];
         String filename = data["filename"];
         String url = protocol + host + ":" + port + "/api/sound/file/";
 
-        SDUtil::downloadFile(url, userId, filename);
-      }
-      else if (doc["event"] == "SendPlaylist") {
-        WebSocketClient::parsePlayList(doc["data"]);
+        SDUtil::downloadFile(url, id, filename);
+      }else if (doc["event"] == "SendPlaylist") {
+        AudioMsgData* dataA = new AudioMsgData();
+        dataA->list = WebSocketClient::parsePlayList(doc["data"]);
+        dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
+
+        audioMsgQueue.send(dataA);
+      }else if(doc["event"] == "SendUserMode") {
+        JsonObject data = doc["data"];
+
+        AudioMsgData* dataA = new AudioMsgData();
+        dataA->list = Playlist();
+        dataA->events = AudioMQEvents::UPDATE_ENABLE;
+        dataA->enable = false;
+
+        NeoPixelMsgData* dataN = new NeoPixelMsgData();
+        dataN->list = LightEffect();
+        dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+        dataN->mode = ELightMode::None;
+        dataN->enable = false;
+
+        UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
+        switch (UserModeControl::getInstance().interactionMode)
+        {
+        case EInteractionMode::LightOnly :
+          dataN->enable = true;
+          dataA->enable = false;
+          break;
+        case EInteractionMode::SoundOnly :
+          dataN->enable = false;
+          dataA->enable = true;
+          break;
+        case EInteractionMode::Shuffle :
+          xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
+          break;
+        case EInteractionMode::Synchronization :
+          dataN->enable = false;
+          dataA->enable = true;
+          break;
+        default:
+          break;
+        }
+        audioMsgQueue.send(dataA);
+        neoPixelMsgQueue.send(dataN);
+
+        UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
+
+        NeoPixelMsgData* dataN2 = new NeoPixelMsgData();
+        dataN2->list = LightEffect();
+        dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
+        dataN2->mode = Util::stringToELightMode(data["lightMode"]);
+
+        neoPixelMsgQueue.send(dataN2);
+      }else if(doc["event"] == "sendHumanDetection") {
+        JsonObject data = doc["data"];
+
+        if(UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB)
+          UserModeControl::getInstance().humanDetection = !data["isDetected"];
+        else
+          UserModeControl::getInstance().humanDetection = data["isDetected"];
+
+        if(UserModeControl::getInstance().humanDetection){
+
+          AudioMsgData* dataA = new AudioMsgData();
+          dataA->list = Playlist();
+          dataA->events = AudioMQEvents::UPDATE_ENABLE;
+          dataA->enable = false;
+
+          NeoPixelMsgData* dataN = new NeoPixelMsgData();
+          dataN->list = LightEffect();
+          dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+          dataN->mode = ELightMode::None;
+          dataN->enable = false;
+
+          switch (UserModeControl::getInstance().interactionMode)
+          {
+          case EInteractionMode::LightOnly :
+            dataN->enable = true;
+            dataA->enable = false;
+            break;
+          case EInteractionMode::SoundOnly :
+            dataN->enable = false;
+            dataA->enable = true;
+            break;
+          case EInteractionMode::Shuffle :
+            xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
+            break;
+          case EInteractionMode::Synchronization :
+            dataN->enable = false;
+            dataA->enable = true;
+            break;
+          default:
+            break;
+          }
+          audioMsgQueue.send(dataA);
+          neoPixelMsgQueue.send(dataN);
+        }
+        
       }
   });
   wsClient.onErrorReceived([&](uint8_t *payload, size_t length){
