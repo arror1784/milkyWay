@@ -97,6 +97,7 @@ void receiveWifi() {
     webServer.send(400, "text/plain", "wrong json data");
   }
 }
+
 void setup() {
   Serial.begin(115200);
 
@@ -143,23 +144,18 @@ void setup() {
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
         WebSocketClient::parsePlayList(doc["playlist"]);
-
-        String protocol = ssl ? "https://" : "http://";
-        long id = doc["id"];
-        String filename = doc["filename"];
-        String url = protocol + host + ":" + port + "/api/sound/file/" + "GO" + "%20" + "High.mp3";
-
-        SDUtil::downloadFile(url,49,"GO High.mp3");
       }
       else if (doc["event"] == "SendLightEffect") {
       }
       else if (doc["event"] == "SendSound") {
-        String protocol = ssl ? "https://" : "http://";
-        long id = doc["id"];
-        String filename = doc["filename"];
-        String url = protocol + host + ":" + port + "/api/sound/file/" + filename;
+        JsonObject data = doc["data"];
 
-        SDUtil::downloadFile(url, id, filename);
+        String protocol = ssl ? "https://" : "http://";
+        long userId = data["userId"];
+        String filename = data["filename"];
+        String url = protocol + host + ":" + port + "/api/sound/file/";
+
+        SDUtil::downloadFile(url, userId, filename);
       }
       else if (doc["event"] == "SendPlaylist") {
         WebSocketClient::parsePlayList(doc["data"]);
