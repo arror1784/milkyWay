@@ -5,12 +5,14 @@
 #include "WebSocketsClient.h"
 #include "NeoPixel.h"
 #include "SDUtil.h"
+#include "AudioControl.h"
 
 #include <ArduinoJson.h>
 #include <WString.h>
-#include <queue>
+#include <functional>
+#include <optional>
 
-class WebSocketClient : public Singleton<WebSocketClient> {
+class WebSocketClient{
 public:
   WebSocketClient();
 
@@ -26,16 +28,34 @@ public:
 
   void setWithSsl(bool withSsl);
 
-private:
-  void textMessageReceived(uint8_t *payload, size_t length);
+  void sendText(String txt);
+  
+  typedef std::function<void(uint8_t *, size_t)> webSocketReceiveCB;
 
-  void binaryMessageReceived(uint8_t *payload, size_t length);
+  void onTextMessageReceived(webSocketReceiveCB cb){_webSockectReceiveText = cb;};
 
-  void connected(uint8_t *payload, size_t length);
+  void onBinaryMessageReceived(webSocketReceiveCB cb){_webSockectReceiveBinary = cb;};
 
-  void disconnected(uint8_t *payload, size_t length);
+  void onConnected(webSocketReceiveCB cb){_webSockectReceiveConnected = cb;};
 
-  void errorReceived(uint8_t *payload, size_t length);
+  void onDisconnected(webSocketReceiveCB cb){_webSockectReceiveDisconnected = cb;};
+
+  void onErrorReceived(webSocketReceiveCB cb){_webSockectReceiveError = cb;};
+
+  static Playlist parsePlayList(const JsonObject& data) {
+    Playlist playlist;
+    playlist.id = data["id"];
+    playlist.isShuffle = data["isShuffle"];
+    playlist.sounds.clear();
+    for (auto jsonSound: JsonArray(data["sounds"])) {
+      Sound sound;
+      sound.filename = String(jsonSound["filename"]);
+      sound.size = jsonSound["size"];
+
+      playlist.sounds.push_back(sound);
+    }
+    return playlist;
+  }
 
 private:
   String _host = "0.0.0.0";
@@ -43,6 +63,13 @@ private:
   bool _withSSL = false;
 
   WebSocketsClient _client;
+
+  std::optional<webSocketReceiveCB> _webSockectReceiveText;
+  std::optional<webSocketReceiveCB> _webSockectReceiveBinary;
+  std::optional<webSocketReceiveCB> _webSockectReceiveConnected;
+  std::optional<webSocketReceiveCB> _webSockectReceiveDisconnected;
+  std::optional<webSocketReceiveCB> _webSockectReceiveError;
+
 };
 
 

@@ -6,7 +6,7 @@ void WifiModule::start() {
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
 
   Serial.print("Setting soft-AP ... ");
-  Serial.println(WiFi.softAP(_ssid.c_str(), _password.c_str()) ? "Ready" : "Failed!");
+  Serial.println(WiFi.softAP(_ssid.c_str(), NULL) ? "Ready" : "Failed!");
 
   Serial.print("Soft-AP IP address = ");
   Serial.println(WiFi.softAPIP());
@@ -19,12 +19,15 @@ void WifiModule::stop() {
 String WifiModule::connectWifi(const String &ssid, const String &password) {
   WiFi.begin(ssid.c_str(), password.c_str());
 
-  for (int i = 0; i < 10; i++) {
-    if(WiFiClass::status() == WL_CONNECTED) {
-      break;
+  for(int j = 0; j < 3 ; j++){
+    Serial.println("try connect");
+    for (int i = 0; i < 5; i++) {
+      if(WiFiClass::status() == WL_CONNECTED) {
+        break;
+      }
+      Serial.println("Connecting to WiFi.." + String(i));
+      delay(1000);
     }
-    Serial.println("Connecting to WiFi.." + String(i));
-    delay(1000);
   }
 
   switch (WiFiClass::status()) {
@@ -53,9 +56,8 @@ void WifiModule::disconnectWifi(){
   WiFi.disconnect();
 }
 
-void WifiModule::setApInfo(const String &ssid, const String &password) {
+void WifiModule::setApInfo(const String &ssid) {
   _ssid = ssid;
-  _password = password;
 }
 
 void WifiModule::setIp(const String &localIp, const String &gateway, const String &subnet) {

@@ -1,57 +1,23 @@
 #include "WebSocketClient.h"
 
-class Sound {
-public:
-  String filename;
-  long size;
-};
-
-class Playlist {
-public:
-  long id;
-  bool isShuffle;
-  std::vector<Sound *> sounds;
-};
-
-Playlist playlist;
-
-void parsePlayList(const JsonObject& data) {
-  playlist.id = data["id"];
-  playlist.isShuffle = data["isShuffle"];
-  for (auto sound: playlist.sounds) {
-    delete sound;
-  }
-  for (auto jsonSound: JsonArray(data["sounds"])) {
-    auto *sound = new Sound();
-    sound->filename = String(jsonSound["filename"]);
-    sound->size = jsonSound["size"];
-
-    playlist.sounds.push_back(sound);
-  }
-
-//    Serial.println(String("Playlist id: ") + playlist.id);
-//    Serial.println(String("Playlist isShuffle: ") + playlist.isShuffle);
-//
-//
-//    for (auto sound: playlist.sounds) {
-//        Serial.println(String("Playlist Send filename: ") + sound->filename);
-//        Serial.println(String("Playlist Send size: ") + sound->size);
-//    }
-}
-
 WebSocketClient::WebSocketClient() {
   _client.onEvent([=](WStype_t type, uint8_t * payload, size_t length){
     switch (type) {
       case WStype_ERROR:
-        return errorReceived(payload, length);
+        if(_webSockectReceiveError.has_value()) _webSockectReceiveError.value()(payload,length);
+        return;
       case WStype_DISCONNECTED:
-        return disconnected(payload, length);
+        if(_webSockectReceiveDisconnected.has_value()) _webSockectReceiveDisconnected.value()(payload,length);
+        return;
       case WStype_CONNECTED:
-        return connected(payload, length);
+        if(_webSockectReceiveConnected.has_value()) _webSockectReceiveConnected.value()(payload,length);
+        return;
       case WStype_TEXT:
-        return textMessageReceived(payload, length);
+        if(_webSockectReceiveText.has_value()) _webSockectReceiveText.value()(payload,length);
+        return;
       case WStype_BIN:
-        return binaryMessageReceived(payload, length);
+        if(_webSockectReceiveBinary.has_value()) _webSockectReceiveBinary.value()(payload,length);
+        return;
       default:
         return;
     }
@@ -85,52 +51,6 @@ void WebSocketClient::setPort(int port) {
 void WebSocketClient::setWithSsl(bool withSsl) {
   _withSSL = withSsl;
 }
-
-void WebSocketClient::textMessageReceived(uint8_t *payload, size_t length) {
-  DynamicJsonDocument doc(length * 2);
-  deserializeJson(doc, payload);
-
-  if (doc.containsKey("authenticationToken")) {
-    SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
-    parsePlayList(doc["playlist"]);
-  }
-  else if (doc["event"] == "SendLightEffect") {
-  }
-  else if (doc["event"] == "SendSound") {
-    String protocol = _withSSL ? "https://" : "http://";
-    long id = doc["id"];
-    String filename = doc["filename"];
-    String url = protocol + _host + ":" + _port + "/api/file/" + filename;
-
-    SDUtil::writeFile(url, id, filename);
-  }
-  else if (doc["event"] == "SendPlaylist") {
-    parsePlayList(doc["data"]);
-  }
-}
-
-void WebSocketClient::binaryMessageReceived(uint8_t *payload, size_t length) {
-}
-
-void WebSocketClient::connected(uint8_t *payload, size_t length) {
-  Serial.println("websocket connected");
-
-  DynamicJsonDocument doc(512);
-  JsonObject json = doc.to<JsonObject>();
-  json["event"] = "registerDeviceSession";
-  json["name"] = "Kira";
-  json["type"] = "Mirror";
-
-  String strJson;
-  serializeJson(json, strJson);
-
-  _client.sendTXT(strJson.c_str());
-}
-
-void WebSocketClient::disconnected(uint8_t *payload, size_t length) {
-  Serial.println("websocket disconnected");
-}
-
-void WebSocketClient::errorReceived(uint8_t *payload, size_t length) {
-  Serial.println("websocket errorReceived");
+void WebSocketClient::sendText(String txt){
+    _client.sendTXT(txt.c_str());
 }

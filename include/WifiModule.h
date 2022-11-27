@@ -28,7 +28,7 @@ public:
 
   void disconnectWifi();
 
-  void setApInfo(const String &ssid, const String &password);
+  void setApInfo(const String &ssid);
 
   bool isConnectedST() const { return WiFi.isConnected(); }
 
@@ -70,7 +70,6 @@ public:
 
 private:
   String _ssid;
-  String _password;
 
   IPAddress _localIP;
   IPAddress _gateway;
