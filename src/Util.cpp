@@ -86,6 +86,7 @@ EOperationMode Util::stringToEOperationMode(const String &string) {
   if (string.compareTo("Default") == 0) return EOperationMode::Default;
   else if (string.compareTo("HumanDetectionA") == 0) return EOperationMode::HumanDetectionA;
   else if (string.compareTo("HumanDetectionB") == 0) return EOperationMode::HumanDetectionB;
+  return EOperationMode::Default;
 }
 
 uint32_t Util::stringToRGBW(const String &string) {

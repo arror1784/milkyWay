@@ -16,12 +16,6 @@ public:
   std::vector<Sound> sounds;
 };
 
-
-enum class AudioMQEvents{
-  UPDATE_MODE = 0,
-  UPDATE_PLAYLIST = 1
-};
-
 class AudioControl{
 
 public:

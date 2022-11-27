@@ -36,11 +36,18 @@ void neoPixelTask(void* parms) {
     while(1){
       NeoPixelMsgData* msg = neoPixelMsgQueue.recv();
       if(msg != nullptr){
+        if(msg->events == NeoPixelMQEvents::UPDATE_EFFECT){
+          neopixel.setLightEffects(msg->list);
+        }else if(msg->events == NeoPixelMQEvents::UPDATE_MODE){
+          neopixel.changeMode(msg->mode);
+        }
+        Serial.println("asdasddas");
+
+        delete msg;
       }
-      neopixel.dim(10,500);
+      neopixel.loop();
     }
     vTaskDelete(NULL);
-
 }
 
 AudioMsgQueue audioMsgQueue(5);
@@ -55,7 +62,7 @@ void audioTask(void* parms){
       
       audioControl.setPlayList(list);
 
-      // delete msg;
+      delete msg;
     }
     audioControl.loop();
   }
@@ -144,10 +151,40 @@ void setup() {
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
         WebSocketClient::parsePlayList(doc["playlist"]);
-      }
-      else if (doc["event"] == "SendLightEffect") {
-      }
-      else if (doc["event"] == "SendSound") {
+
+        AudioMsgData* dataA = new AudioMsgData();
+        dataA->list = WebSocketClient::parsePlayList(doc["playlist"]);
+        dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
+
+        audioMsgQueue.send(dataA);
+
+        JsonArray array = doc["lightEffects"];
+
+        for(int i = 0; i < array.size(); i++){
+
+          NeoPixelMsgData* dataN = new NeoPixelMsgData();
+          dataN->list = WebSocketClient::parseLightEffect(array[i]);
+          dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+          dataN->mode = ELightMode::N;
+
+          neoPixelMsgQueue.send(dataN);
+
+        }
+
+        NeoPixelMsgData* dataN = new NeoPixelMsgData();
+        dataN->list = LightEffect();
+        dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+        dataN->mode = Util::stringToELightMode(doc["userMode"]["lightMode"]);
+        Serial.println(String(doc["userMode"]["lightMode"]));
+
+        neoPixelMsgQueue.send(dataN);
+        
+        // doc["operationMode"];
+        // doc["interactionMode"];
+
+      }else if (doc["event"] == "SendLightEffect") {
+      
+      }else if (doc["event"] == "SendSound") {
         JsonObject data = doc["data"];
 
         String protocol = ssl ? "https://" : "http://";

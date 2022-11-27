@@ -56,6 +56,29 @@ public:
     }
     return playlist;
   }
+  static LightEffect parseLightEffect(const JsonObject& jsonLightEffect) {
+    LightEffect lightEffect;
+
+    lightEffect.id = jsonLightEffect["id"];
+
+    lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
+    lightEffect.isRandomColor = jsonLightEffect["isRandomColor"];
+    lightEffect.speed = jsonLightEffect["speed"];
+    lightEffect.isRandomSpeed = jsonLightEffect["isRandomSpeed"];
+
+    for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
+        ColorSet colorSet;
+
+        colorSet.id = jsonColorSet["id"];
+
+        for (String color: JsonArray(jsonColorSet["colors"])) {
+            colorSet.colors.push_back(Util::stringToRGBW(color));
+        }
+        lightEffect.colorSets.push_back(colorSet);
+    }
+
+    return lightEffect;
+  }
 
 private:
   String _host = "0.0.0.0";

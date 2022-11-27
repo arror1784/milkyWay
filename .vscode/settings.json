@@ -58,7 +58,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "regex": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

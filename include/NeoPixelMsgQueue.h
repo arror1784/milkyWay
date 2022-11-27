@@ -8,10 +8,18 @@
 #include "MsgQueue.h"
 #include "NeoPixel.h"
 
+#include "Util.h"
+
+enum class NeoPixelMQEvents{
+  UPDATE_MODE = 0,
+  UPDATE_EFFECT = 1
+};
+
 class NeoPixelMsgData{
 public:
     LightEffect list;
     NeoPixelMQEvents events;
+    ELightMode mode;
 };
 
 class NeoPixelMsgQueue : public MsgQueue<NeoPixelMsgData> {

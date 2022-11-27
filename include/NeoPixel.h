@@ -17,33 +17,29 @@ public:
 class LightEffect {
 public:
     long id;
-    std::vector<ColorSet *> colorSets;
+    std::vector<ColorSet> colorSets;
     ELightMode mode = ELightMode::Blinking;
     bool isRandomColor;
     long speed;
     bool isRandomSpeed;
 };
 
-enum class NeoPixelMQEvents{
-  UPDATE_MODE = 0,
-  UPDATE_EFFECT = 1
-};
-
-
 class Neopixel {
 public:
     Neopixel(int nLed, int pin, neoPixelType type,boolean isTask=false);
     void begin();
-    void plotColorSet(long colorSetIndex, uint8_t br);
-    void plotColorSet(long colorSetIndex);
+    void plotColorSet(LightEffect lightEffect,int colorSetIndex, uint8_t br);
+    void plotColorSet(LightEffect lightEffect,int colorSetIndex);
     void colorChange(int changes, unsigned time);
     void dim(int dims, unsigned int time);
     void blink(int blinks, unsigned int time);
 
-    void initData(const JsonObject &registerDeviceRes);
-    void setLightEffects(const JsonArray &jsonLightEffects);
-
+    void initData(const LightEffect &lightEffect,ELightMode mode);
+    void setLightEffects(const LightEffect &lightEffects);
+    void changeMode(ELightMode mode);
     const LightEffect &currentLightEffect();
+    
+    void loop();
 
 private:
     void delelOrTaskDelay(uint32_t time);
@@ -53,13 +49,19 @@ private:
 
     int _selectColorPreset;
     int _nLed;
+
+    int _mixCount = 0;
+    int _mixMode = 0;
+    const int _MaxMixCount = 4;
+    int _colorPresetIndex = 0;
+
     boolean _isTask = false;
 
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;
     LightEffect _colorChangeLightEffect;
 
-    ELightMode _mode = ELightMode::Mixed;
+    ELightMode _mode = ELightMode::N;
 
     int _colorSetId = 0;
 

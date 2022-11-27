@@ -9,20 +9,20 @@
 #include <WString.h>
 #include <IPAddress.h>
 
-enum ELightMode {
-  Breathing, Blinking, ColorChange, Mixed
+enum class ELightMode {
+  Breathing = 0, Blinking = 1, ColorChange = 3, Mixed, Sync, N
 };
 
-enum EDeviceType {
-  Mirror, HumanDetection
+enum class EDeviceType {
+  Mirror, HumanDetection, N
 };
 
-enum EInteractionMode {
-  LightOnly, SoundOnly, Shuffle, Synchronization
+enum class EInteractionMode {
+  LightOnly, SoundOnly, Shuffle, Synchronization, N
 };
 
-enum EOperationMode {
-  Default, HumanDetectionA, HumanDetectionB
+enum class EOperationMode {
+  Default, HumanDetectionA, HumanDetectionB, N
 };
 
 class Util {
