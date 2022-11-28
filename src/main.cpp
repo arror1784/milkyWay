@@ -61,25 +61,22 @@ void receiveWifi() {
 void setup() {
     Serial.begin(115200);
 
-//    SDUtil::getInstance().init();
-//    Serial.println(SDUtil::getInstance().getSerial());
+    SDUtil::getInstance().init();
+    Serial.println(SDUtil::getInstance().getSerial());
     WiFiClass::mode(WIFI_MODE_STA);
     WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
-//    WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
-
-    WifiModule::getInstance().setApInfo("Kira HumanDetection");
+    WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
 
     wsClient.setHost(host);
     wsClient.setPort(port);
     wsClient.setWithSsl(ssl);
     wsClient.onConnected([&](uint8_t *payload, size_t length) {
-
         Serial.println("websocket connected");
 
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
-        json["name"] = "Kira";
+        json["name"] = "Kira UltraSonic 1";
         json["type"] = "HumanDetection";
 
         String strJson;
@@ -99,7 +96,7 @@ void setup() {
         deserializeJson(doc, payload);
 
         if (doc.containsKey("sens")) {
-
+            sens = doc["sens"];
         }
     });
     wsClient.onErrorReceived([&](uint8_t *payload, size_t length) {
@@ -109,32 +106,34 @@ void setup() {
 
     String status = WifiModule::getInstance().connectWifi("301_main_2.4", "hongsamcoffee3*");
 
-//    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
-//    Serial.println(str);
-//    std::string s(str.c_str(), str.length());
-//    std::istringstream ss(s);
-//    std::string stringBuffer;
-//    std::vector<std::string> x;
-//    x.clear();
-//
-//    while (getline(ss, stringBuffer, ' ')) {
-//        x.push_back(stringBuffer);
-//    }
-//    if (x.size() == 2) {
-//        String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
-//        if (status != "WL_CONNECTED") {
-//            Serial.println("wifi connect fail");
-//            WifiModule::getInstance().start();
-//        }
-//        else {
-//            Serial.println("wifi connect");
-//            wsClient.connect();
-//        }
-//    }
-//    else {
-//        Serial.println("there is no wifi passwd");
-//        WifiModule::getInstance().start();
-//    }
+    wsClient.connect();
+
+    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
+    Serial.println(str);
+    std::string s(str.c_str(), str.length());
+    std::istringstream ss(s);
+    std::string stringBuffer;
+    std::vector<std::string> x;
+    x.clear();
+
+    while (getline(ss, stringBuffer, ' ')) {
+        x.push_back(stringBuffer);
+    }
+    if (x.size() == 2) {
+        String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
+        if (status != "WL_CONNECTED") {
+            Serial.println("wifi connect fail");
+            WifiModule::getInstance().start();
+        }
+        else {
+            Serial.println("wifi connect");
+            wsClient.connect();
+        }
+    }
+    else {
+        Serial.println("there is no wifi passwd");
+        WifiModule::getInstance().start();
+    }
 
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
     webServer.begin();
@@ -147,8 +146,7 @@ void loop() {
     wsClient.loop();
 
     distance = ult.readDistance(send0153Address);
-    Serial.println(String("distance : ") + distance);
-    if(distance > 20 && distance < 750) {
+    if(distance > 17 && distance < 750) {
         if(isDetected) {
             if(distance > sens) {
                 notSameCount += 1;
@@ -166,6 +164,16 @@ void loop() {
         if(notSameCount > 5) {
             isDetected = !isDetected;
             notSameCount = 0;
+
+            DynamicJsonDocument doc(512);
+            JsonObject json = doc.to<JsonObject>();
+            json["event"] = "sendHumanDetection";
+            json["data"]["isDetected"] = isDetected;
+
+            String strJson;
+            serializeJson(json, strJson);
+
+            wsClient.sendText(strJson);
         }
     }
     delay(100);
