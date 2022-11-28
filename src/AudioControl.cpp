@@ -20,13 +20,6 @@ void AudioControl::loop(){
 void AudioControl::setPlayList(Playlist& list){
     _playList = list;
     _listIndex = 0;
-    // _audio.stopSong();
-
-    // if(_isResume){
-    //     playNext();
-    // }else{
-    //     playNext();
-    // }
 }
 
 void AudioControl::playNext() {

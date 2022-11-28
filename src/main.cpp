@@ -30,6 +30,10 @@ static const String host = "192.168.219.112";
 static const int port = 6001;
 static const bool ssl = false;
 
+void processUserMode(JsonObject data);
+void processPlayList(JsonObject data);
+void processLightEffects(JsonArray array);
+
 NeoPixelMsgQueue neoPixelMsgQueue(5);
 void neoPixelTask(void* parms) {
 
@@ -49,6 +53,7 @@ void neoPixelTask(void* parms) {
       }
       neopixel.loop();
     }
+
     vTaskDelete(NULL);
 }
 
@@ -84,13 +89,13 @@ void shuffleTast(void* parm){
   bool i = true;
   while (1)
   {
+    Serial.println("suffle test");
     if(UserModeControl::getInstance().interactionMode != EInteractionMode::Shuffle)
       break;
 
       AudioMsgData* dataA = new AudioMsgData();
       dataA->list = Playlist();
-      dataA->events = AudioMQEvents::UPDATE_ENABLE;
-      
+      dataA->events = AudioMQEvents::UPDATE_ENABLE; 
 
       NeoPixelMsgData* dataN = new NeoPixelMsgData();
       dataN->list = LightEffect();
@@ -106,6 +111,9 @@ void shuffleTast(void* parm){
         dataA->enable = true;
         dataN->enable = false;
       }
+
+      audioMsgQueue.send(dataA);
+      neoPixelMsgQueue.send(dataN);
 
       Util::taskDelay(SUFFLE_TIMEOUT);
   }
@@ -163,10 +171,12 @@ void setup() {
 
     Serial.println("websocket connected");
 
+    //todo serial 
     DynamicJsonDocument doc(512);
     JsonObject json = doc.to<JsonObject>();
     json["event"] = "registerDeviceSession";
-    json["name"] = "Kira";
+    json["name"] = SDUtil::readFile(SDUtil::serialPath_);
+    Serial.println(String(json["name"]));
     json["type"] = "Mirror";
 
     String strJson;
@@ -186,50 +196,15 @@ void setup() {
 
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
-        WebSocketClient::parsePlayList(doc["playlist"]);
 
-        AudioMsgData* dataA = new AudioMsgData();
-        dataA->list = WebSocketClient::parsePlayList(doc["playlist"]);
-        dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
-
-        audioMsgQueue.send(dataA);
-
-        JsonArray array = doc["lightEffects"];
-
-        for(int i = 0; i < array.size(); i++){
-
-          NeoPixelMsgData* dataN = new NeoPixelMsgData();
-          dataN->list = WebSocketClient::parseLightEffect(array[i]);
-          dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
-          dataN->mode = ELightMode::None ;
-
-          neoPixelMsgQueue.send(dataN);
-
-        }
-
-        NeoPixelMsgData* dataN = new NeoPixelMsgData();
-        dataN->list = LightEffect();
-        dataN->events = NeoPixelMQEvents::UPDATE_MODE;
-        dataN->mode = Util::stringToELightMode(doc["userMode"]["lightMode"]);
-
-        neoPixelMsgQueue.send(dataN);
-        
-        // doc["operationMode"];
-        // doc["interactionMode"];
+        processPlayList(doc["playlist"]);
+        processLightEffects(doc["lightEffects"]);
+        processUserMode(doc["userMode"]);
 
       }else if (doc["event"] == "SendLightEffect") {
-        JsonArray array = doc["data"];
 
-        for(int i = 0; i < array.size(); i++){
+        processLightEffects(doc["data"]);
 
-          NeoPixelMsgData* dataN = new NeoPixelMsgData();
-          dataN->list = WebSocketClient::parseLightEffect(array[i]);
-          dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
-          dataN->mode = ELightMode::None;
-
-          neoPixelMsgQueue.send(dataN);
-
-        }
       }else if (doc["event"] == "SendSound") {
         JsonObject data = doc["data"];
 
@@ -241,57 +216,10 @@ void setup() {
 
         SDUtil::downloadFile(url, id, filename);
       }else if (doc["event"] == "SendPlaylist") {
-        AudioMsgData* dataA = new AudioMsgData();
-        dataA->list = WebSocketClient::parsePlayList(doc["data"]);
-        dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
 
-        audioMsgQueue.send(dataA);
+        processPlayList(doc["data"]);
       }else if(doc["event"] == "SendUserMode") {
-        JsonObject data = doc["data"];
-
-        AudioMsgData* dataA = new AudioMsgData();
-        dataA->list = Playlist();
-        dataA->events = AudioMQEvents::UPDATE_ENABLE;
-        dataA->enable = false;
-
-        NeoPixelMsgData* dataN = new NeoPixelMsgData();
-        dataN->list = LightEffect();
-        dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
-        dataN->mode = ELightMode::None;
-        dataN->enable = false;
-
-        UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
-        switch (UserModeControl::getInstance().interactionMode)
-        {
-        case EInteractionMode::LightOnly :
-          dataN->enable = true;
-          dataA->enable = false;
-          break;
-        case EInteractionMode::SoundOnly :
-          dataN->enable = false;
-          dataA->enable = true;
-          break;
-        case EInteractionMode::Shuffle :
-          xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
-          break;
-        case EInteractionMode::Synchronization :
-          dataN->enable = false;
-          dataA->enable = true;
-          break;
-        default:
-          break;
-        }
-        audioMsgQueue.send(dataA);
-        neoPixelMsgQueue.send(dataN);
-
-        UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
-
-        NeoPixelMsgData* dataN2 = new NeoPixelMsgData();
-        dataN2->list = LightEffect();
-        dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
-        dataN2->mode = Util::stringToELightMode(data["lightMode"]);
-
-        neoPixelMsgQueue.send(dataN2);
+        processUserMode(doc["data"]);
       }else if(doc["event"] == "sendHumanDetection") {
         JsonObject data = doc["data"];
 
@@ -382,11 +310,74 @@ void loop() {
   webServer.handleClient();
   wsClient.loop();
 
+}void processUserMode(JsonObject data){
+
+    AudioMsgData* dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = AudioMQEvents::UPDATE_ENABLE;
+    dataA->enable = false;
+
+    NeoPixelMsgData* dataN = new NeoPixelMsgData();
+    dataN->list = LightEffect();
+    dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
+    dataN->mode = ELightMode::None;
+    dataN->enable = false;
+
+    UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
+    switch (UserModeControl::getInstance().interactionMode)
+    {
+    case EInteractionMode::LightOnly :
+      dataN->enable = true;
+      dataA->enable = false;
+      break;
+    case EInteractionMode::SoundOnly :
+      dataN->enable = false;
+      dataA->enable = true;
+      break;
+    case EInteractionMode::Shuffle :
+      xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
+      break;
+    case EInteractionMode::Synchronization :
+      dataN->enable = false;
+      dataA->enable = true;
+      break;
+    default:
+      break;
+    }
+    audioMsgQueue.send(dataA);
+    neoPixelMsgQueue.send(dataN);
+
+    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
+
+    NeoPixelMsgData* dataN2 = new NeoPixelMsgData();
+    dataN2->list = LightEffect();
+    dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
+    dataN2->mode = Util::stringToELightMode(data["lightMode"]);
+
+    neoPixelMsgQueue.send(dataN2);
+
+}
+void processPlayList(JsonObject data){
+  
+    AudioMsgData* dataA = new AudioMsgData();
+    dataA->list = WebSocketClient::parsePlayList(data);
+    dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
+
+    audioMsgQueue.send(dataA);
+}
+void processLightEffects(JsonArray array){
+    for(int i = 0; i < array.size(); i++){
+
+    NeoPixelMsgData* dataN = new NeoPixelMsgData();
+    dataN->list = WebSocketClient::parseLightEffect(array[i]);
+    dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+    dataN->mode = ELightMode::None;
+
+    neoPixelMsgQueue.send(dataN);
+
+  }
 }
 
-void audio_info(const char *info){
-    Serial.print("info        "); Serial.println(info);
-}
 void audio_eof_mp3(const char *info){  //end of file
     Serial.print("eof_mp3     ");Serial.println(info);
     audioControl.playNext();
