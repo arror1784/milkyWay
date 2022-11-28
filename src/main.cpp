@@ -1,7 +1,8 @@
-#include <WebServer.h>
 #include <ArduinoJson.h>
 #include <FFat.h>
-#include <sstream>
+#include <SD_MMC.h>
+#include <SPIFFS.h>
+#include <WebServer.h>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
@@ -20,7 +21,10 @@ WebSocketClient wsClient;
 WebServer webServer(80);
 SEN0153 ult(sen0153RX, sen0153TX, SEN0153_BAUD_RATE_DEFAULT);
 
-int distance = 0;
+int sens = 70;
+uint16_t distance = 0;
+bool isDetected = false;
+int notSameCount = 0;
 
 void receiveWifi() {
     if (!webServer.hasArg("plain")) {
@@ -57,11 +61,13 @@ void receiveWifi() {
 void setup() {
     Serial.begin(115200);
 
-    SDUtil::getInstance().init();
+//    SDUtil::getInstance().init();
+//    Serial.println(SDUtil::getInstance().getSerial());
     WiFiClass::mode(WIFI_MODE_STA);
-    Serial.println(SDUtil::getInstance().getSerial());
     WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
-    WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
+//    WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
+
+    WifiModule::getInstance().setApInfo("Kira HumanDetection");
 
     wsClient.setHost(host);
     wsClient.setPort(port);
@@ -101,43 +107,66 @@ void setup() {
         Serial.println("websocket errorReceived");
     });
 
-    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
-    Serial.println(str);
-    std::string s(str.c_str(), str.length());
-    std::istringstream ss(s);
-    std::string stringBuffer;
-    std::vector<std::string> x;
-    x.clear();
+    String status = WifiModule::getInstance().connectWifi("301_main_2.4", "hongsamcoffee3*");
 
-    while (getline(ss, stringBuffer, ' ')) {
-        x.push_back(stringBuffer);
-    }
-    if (x.size() == 2) {
-        String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
-        if (status != "WL_CONNECTED") {
-            Serial.println("wifi connect fail");
-            WifiModule::getInstance().start();
-        }
-        else {
-            Serial.println("wifi connect");
-            wsClient.connect();
-        }
-    }
-    else {
-        Serial.println("there is no wifi passwd");
-        WifiModule::getInstance().start();
-    }
+//    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
+//    Serial.println(str);
+//    std::string s(str.c_str(), str.length());
+//    std::istringstream ss(s);
+//    std::string stringBuffer;
+//    std::vector<std::string> x;
+//    x.clear();
+//
+//    while (getline(ss, stringBuffer, ' ')) {
+//        x.push_back(stringBuffer);
+//    }
+//    if (x.size() == 2) {
+//        String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
+//        if (status != "WL_CONNECTED") {
+//            Serial.println("wifi connect fail");
+//            WifiModule::getInstance().start();
+//        }
+//        else {
+//            Serial.println("wifi connect");
+//            wsClient.connect();
+//        }
+//    }
+//    else {
+//        Serial.println("there is no wifi passwd");
+//        WifiModule::getInstance().start();
+//    }
 
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
     webServer.begin();
+
+    ult.begin();
 }
 
 void loop() {
     webServer.handleClient();
     wsClient.loop();
 
-    uint16_t distance = ult.readDistance(send0153Address);
-    if () {
+    distance = ult.readDistance(send0153Address);
+    Serial.println(String("distance : ") + distance);
+    if(distance > 20 && distance < 750) {
+        if(isDetected) {
+            if(distance > sens) {
+                notSameCount += 1;
+            } else {
+                notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
+            }
+        } else if(!isDetected) {
+            if(distance <= sens) {
+                notSameCount += 1;
+            } else {
+                notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
+            }
+        }
 
+        if(notSameCount > 5) {
+            isDetected = !isDetected;
+            notSameCount = 0;
+        }
     }
+    delay(100);
 }
