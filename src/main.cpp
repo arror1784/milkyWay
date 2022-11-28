@@ -249,48 +249,51 @@ void setup() {
       }else if(doc["event"] == "sendHumanDetection") {
         JsonObject data = doc["data"];
 
-        if(UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB)
-          UserModeControl::getInstance().humanDetection = !data["isDetected"];
-        else
-          UserModeControl::getInstance().humanDetection = data["isDetected"];
+        if(UserModeControl::getInstance().operationMode != EOperationMode::Default){
+          if(UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB)
+            UserModeControl::getInstance().humanDetection = !data["isDetected"];
+          else
+            UserModeControl::getInstance().humanDetection = data["isDetected"];
 
-        if(UserModeControl::getInstance().humanDetection){
 
-          AudioMsgData* dataA = new AudioMsgData();
-          dataA->list = Playlist();
-          dataA->events = AudioMQEvents::UPDATE_ENABLE;
-          dataA->enable = false;
-
-          NeoPixelMsgData* dataN = new NeoPixelMsgData();
-          dataN->list = LightEffect();
-          dataN->events = NeoPixelMQEvents::UPDATE_MODE;
-          dataN->mode = ELightMode::None;
-          dataN->enable = false;
-
-          switch (UserModeControl::getInstance().interactionMode)
-          {
-          case EInteractionMode::LightOnly :
-            dataN->enable = true;
+            AudioMsgData* dataA = new AudioMsgData();
+            dataA->list = Playlist();
+            dataA->events = AudioMQEvents::UPDATE_ENABLE;
             dataA->enable = false;
-            break;
-          case EInteractionMode::SoundOnly :
+
+            NeoPixelMsgData* dataN = new NeoPixelMsgData();
+            dataN->list = LightEffect();
+            dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
+            dataN->mode = ELightMode::None;
             dataN->enable = false;
-            dataA->enable = true;
-            break;
-          case EInteractionMode::Shuffle :
-            xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
-            break;
-          case EInteractionMode::Synchronization :
-            dataN->enable = false;
-            dataA->enable = true;
-            break;
-          default:
-            break;
+
+
+          if(UserModeControl::getInstance().humanDetection){
+
+            switch (UserModeControl::getInstance().interactionMode)
+            {
+            case EInteractionMode::LightOnly :
+              dataN->enable = true;
+              dataA->enable = false;
+              break;
+            case EInteractionMode::SoundOnly :
+              dataN->enable = false;
+              dataA->enable = true;
+              break;
+            case EInteractionMode::Shuffle :
+              xTaskCreate(shuffleTast,"shuffleTast",10000,NULL,0,NULL);
+              break;
+            case EInteractionMode::Synchronization :
+              dataN->enable = false;
+              dataA->enable = true;
+              break;
+            default:
+              break;
+            }
           }
-          audioMsgQueue.send(dataA);
+          audioMsgQueue.send(dataA);  
           neoPixelMsgQueue.send(dataN);
         }
-        
       }
   });
   wsClient.onErrorReceived([&](uint8_t *payload, size_t length){
