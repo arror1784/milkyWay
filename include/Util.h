@@ -45,6 +45,8 @@ public:
 
   static uint32_t stringToRGBW(const String &string);
 
+  static void taskDelay(const uint32_t time);
+
 };
 
 

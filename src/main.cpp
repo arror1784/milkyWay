@@ -31,10 +31,9 @@ static const int port = 6001;
 static const bool ssl = false;
 
 NeoPixelMsgQueue neoPixelMsgQueue(5);
-AudioControl audioControl(I2S_LRC,I2S_BCLK,I2S_DOUT);
 void neoPixelTask(void* parms) {
 
-    Neopixel neopixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800,true);
+    Neopixel neopixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800);
 
     while(1){
       NeoPixelMsgData* msg = neoPixelMsgQueue.recv();
@@ -53,9 +52,10 @@ void neoPixelTask(void* parms) {
     vTaskDelete(NULL);
 }
 
+AudioControl audioControl(I2S_LRC,I2S_BCLK,I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
+
 void audioTask(void* parms){
-  
   audioControl.setVolume(21); // 0...21
 
   while(1){
@@ -67,12 +67,14 @@ void audioTask(void* parms){
         audioControl.setPlayList(list);
         audioControl.playNext();
       }else if(msg->events == AudioMQEvents::UPDATE_ENABLE){
-        audioControl.setEnable(msg->enable);
+        if(msg->enable)
+          audioControl.resume();
+        else
+          audioControl.pause();
       }
 
       delete msg;
     }
-    Serial.println("FFFFFFFFFFFF");
     audioControl.loop();
   }
   vTaskDelete(NULL);
@@ -92,7 +94,7 @@ void shuffleTast(void* parm){
 
       NeoPixelMsgData* dataN = new NeoPixelMsgData();
       dataN->list = LightEffect();
-      dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+      dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
       dataN->mode = ELightMode::None;
 
       if(i){
@@ -104,9 +106,8 @@ void shuffleTast(void* parm){
         dataA->enable = true;
         dataN->enable = false;
       }
-      TickType_t xLastWakeTime = xTaskGetTickCount();
 
-      xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(SUFFLE_TIMEOUT));
+      Util::taskDelay(SUFFLE_TIMEOUT);
   }
   
   vTaskDelete(NULL);
@@ -114,8 +115,6 @@ void shuffleTast(void* parm){
 
 WebSocketClient wsClient;
 WebServer webServer(80);
-EventGroupHandle_t xCreatedEventGroup;
-
 void receiveWifi() {
 
   if (!webServer.hasArg("plain")) {
@@ -151,11 +150,6 @@ void receiveWifi() {
 void setup() {
   Serial.begin(115200);
 
-  xCreatedEventGroup = xEventGroupCreate();
-  if(xCreatedEventGroup == NULL){
-    Serial.println("event group create Fail");
-  }
-
   SDUtil::getInstance().init();
   WiFiClass::mode(WIFI_MODE_STA);
   Serial.println(SDUtil::getInstance().getSerial());
@@ -183,7 +177,6 @@ void setup() {
   });
   wsClient.onDisconnected([&](uint8_t *payload, size_t length){
     Serial.println("websocket disconnected");
-    WifiModule::getInstance().start();
   });
   wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length){
       Serial.println(String(payload,length));
@@ -263,7 +256,7 @@ void setup() {
 
         NeoPixelMsgData* dataN = new NeoPixelMsgData();
         dataN->list = LightEffect();
-        dataN->events = NeoPixelMQEvents::UPDATE_MODE;
+        dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
         dataN->mode = ELightMode::None;
         dataN->enable = false;
 
@@ -381,14 +374,20 @@ void setup() {
   webServer.begin();
 
   xTaskCreate(neoPixelTask,"neoPixelTask",10000,NULL,0,NULL);
-  xTaskCreate(audioTask,"audioTask",50000,NULL,0,NULL);
+  xTaskCreate(audioTask,"audioTask",50000,NULL,0,NULL); 
+
 }
 
 void loop() {
   webServer.handleClient();
   wsClient.loop();
+
 }
 
 void audio_info(const char *info){
     Serial.print("info        "); Serial.println(info);
+}
+void audio_eof_mp3(const char *info){  //end of file
+    Serial.print("eof_mp3     ");Serial.println(info);
+    audioControl.playNext();
 }

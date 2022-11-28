@@ -24,7 +24,18 @@ public:
     void setVolume(uint8_t volume);
 
     void setPlayList(Playlist& list);
-    void setEnable(bool enable){_enable = enable;};
+    void pause(){
+      if(_isResume){
+        _isResume = false;
+        _audio.pauseResume();
+      }
+    };
+    void resume(){
+      if(!_isResume){
+        _isResume = true;
+        _audio.pauseResume();
+      }
+    };
     
     void playNext();
     
@@ -36,7 +47,7 @@ private:
     int _volume = 10;
     int _listIndex = 1;
 
-    bool _enable = false;
+    bool _isResume = true;
 
     Playlist _playList;
     

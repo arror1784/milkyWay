@@ -1,6 +1,6 @@
 #include "Neopixel.h"
 
-Neopixel::Neopixel(int nLed, int pin, neoPixelType type,boolean isTask) : _nLed(nLed), _pin(pin), _strip(nLed, pin, type),_isTask(isTask)
+Neopixel::Neopixel(int nLed, int pin, neoPixelType type) : _nLed(nLed), _pin(pin), _strip(nLed, pin, type)
 {
 
 }
@@ -60,12 +60,12 @@ void Neopixel::colorChange(int changes, unsigned time)
         }
         for (int j = 0; j < _delayPartition / 2; j++) {
             plotColorSet(_colorChangeLightEffect,currentcolorSetIndex, _maxBright * j * 2 / _delayPartition);
-            delelOrTaskDelay(time / _delayPartition);
+            Util::taskDelay(time / _delayPartition);
         }
 
         for (int j = _delayPartition / 2; j < _delayPartition; j++) {
             plotColorSet(_colorChangeLightEffect,currentcolorSetIndex, _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
-            delelOrTaskDelay(time / _delayPartition);
+            Util::taskDelay(time / _delayPartition);
         }
 
         prevcolorSetIndex = currentcolorSetIndex;
@@ -78,12 +78,12 @@ void Neopixel::dim(int dims, unsigned int time)
 
         for (int j = 0; j < _delayPartition / 2; j++) {
             plotColorSet(_breathingLightEffect,_colorPresetIndex, _maxBright * j * 2 / _delayPartition);
-            delelOrTaskDelay(time / _delayPartition);
+            Util::taskDelay(time / _delayPartition);
         }
 
         for (int j = _delayPartition / 2; j < _delayPartition; j++) {
             plotColorSet(_breathingLightEffect,_colorPresetIndex, _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
-            delelOrTaskDelay(time / _delayPartition);
+            Util::taskDelay(time / _delayPartition);
         }
     }
 }
@@ -92,10 +92,10 @@ void Neopixel::blink(int blinks, unsigned int time)
 {
     for (int i = 0; i < blinks; i++) {
         plotColorSet(_blinkingLightEffect, _colorPresetIndex);
-        delelOrTaskDelay(time);
+        Util::taskDelay(time);
 
         plotColorSet(_blinkingLightEffect, -1,0);
-        delelOrTaskDelay(time);
+        Util::taskDelay(time);
     }
 }
 
@@ -113,20 +113,9 @@ void Neopixel::setLightEffects(const LightEffect &lightEffects){
     if (mode == ELightMode::ColorChange) _colorChangeLightEffect = lightEffects;
 }
 
-void Neopixel::delelOrTaskDelay(uint32_t time) {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    if (_isTask) {
-        xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(time));
-    }
-    else {
-        delay(time);
-    }
-}
-
 void Neopixel::loop() {
     if(!_enable){
-        delelOrTaskDelay(100);
+        Util::taskDelay(1000);
         return;
     }
     switch (_mode)
@@ -157,7 +146,6 @@ void Neopixel::loop() {
             if(_mixMode == 2) colorChange(1,_colorChangeLightEffect.speed);
             return;
         case ELightMode::Sync :
-
             return;
         default:
             return;

@@ -26,7 +26,7 @@ public:
 
 class Neopixel {
 public:
-    Neopixel(int nLed, int pin, neoPixelType type,boolean isTask=false);
+    Neopixel(int nLed, int pin, neoPixelType type);
     void begin();
     void plotColorSet(LightEffect lightEffect,int colorSetIndex, uint8_t br);
     void plotColorSet(LightEffect lightEffect,int colorSetIndex);
@@ -44,8 +44,6 @@ public:
     void setEnable(bool enable){_enable = enable;};
 
 private:
-    void delelOrTaskDelay(uint32_t time);
-
     Adafruit_NeoPixel _strip;
     int _pin;
 
@@ -57,14 +55,12 @@ private:
     const int _MaxMixCount = 4;
     int _colorPresetIndex = 0;
 
-    boolean _isTask = false;
-
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;
     LightEffect _colorChangeLightEffect;
 
     ELightMode _mode = ELightMode::None;
-    bool _enable = true;
+    bool _enable = false;
 
     int _colorSetId = 0;
 
