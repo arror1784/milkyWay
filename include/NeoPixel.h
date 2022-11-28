@@ -34,6 +34,8 @@ public:
     void dim(int dims, unsigned int time);
     void blink(int blinks, unsigned int time);
 
+    void sync(uint8_t per);
+
     void initData(const LightEffect &lightEffect,ELightMode mode);
     void setLightEffects(const LightEffect &lightEffects);
     void changeMode(ELightMode mode);

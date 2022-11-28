@@ -14,6 +14,7 @@ enum class NeoPixelMQEvents{
   UPDATE_MODE = 0,
   UPDATE_EFFECT = 1,
   UPDATE_ENABLE = 2,
+  UPDATE_SYNC = 3
 };
 
 class NeoPixelMsgData{
@@ -22,6 +23,7 @@ public:
     NeoPixelMQEvents events;
     ELightMode mode;
     bool enable = true;
+    uint8_t sync = 0;
 };
 
 class NeoPixelMsgQueue : public MsgQueue<NeoPixelMsgData> {

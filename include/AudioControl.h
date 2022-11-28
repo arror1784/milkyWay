@@ -40,6 +40,9 @@ public:
     void playNext();
     
     void loop();
+    int16_t getLastGatin(){
+      return _audio.getLastGain();
+    }
 
 private:
     Audio _audio;

@@ -29,6 +29,7 @@
 static const String host = "192.168.219.112";
 static const int port = 6001;
 static const bool ssl = false;
+static const int syncUpdateResolution = 10;
 
 void processUserMode(JsonObject data);
 void processPlayList(JsonObject data);
@@ -48,7 +49,10 @@ void neoPixelTask(void* parms) {
           neopixel.changeMode(msg->mode);
         }else if(msg->events == NeoPixelMQEvents::UPDATE_ENABLE){
           neopixel.setEnable(msg->enable);
+        }else if(msg->events == NeoPixelMQEvents::UPDATE_SYNC){
+          neopixel.sync(msg->sync);
         }
+
         delete msg;
       }
       neopixel.loop();
@@ -62,12 +66,14 @@ AudioMsgQueue audioMsgQueue(5);
 
 void audioTask(void* parms){
   audioControl.setVolume(21); // 0...21
+  TickType_t tick = xTaskGetTickCount();
 
   while(1){
     AudioMsgData* msg = audioMsgQueue.recv();
     if(msg != nullptr){
 
       if(msg->events == AudioMQEvents::UPDATE_PLAYLIST){
+        Serial.println("updatePLAYLIST");   
         auto& list = msg->list;
         audioControl.setPlayList(list);
         audioControl.playNext();
@@ -81,6 +87,25 @@ void audioTask(void* parms){
       delete msg;
     }
     audioControl.loop();
+    if(UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization){
+      if(syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)){
+        tick = xTaskGetTickCount();
+        NeoPixelMsgData* dataN = new NeoPixelMsgData();
+        dataN->list = LightEffect();
+        dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
+        dataN->mode = ELightMode::None;
+        auto absData = std::abs(audioControl.getLastGatin());
+        Serial.println(absData);
+        if(absData <= 1000){
+          dataN->sync = 0;
+        }else if(absData > 25000){
+          dataN->sync = 255;
+        }else{
+          dataN->sync = map(std::abs(audioControl.getLastGatin()),1000,32766,0,255);
+        }
+        neoPixelMsgQueue.send(dataN);
+      }
+    }
   }
   vTaskDelete(NULL);
 }
@@ -218,6 +243,7 @@ void setup() {
       }else if (doc["event"] == "SendPlaylist") {
 
         processPlayList(doc["data"]);
+
       }else if(doc["event"] == "SendUserMode") {
         processUserMode(doc["data"]);
       }else if(doc["event"] == "sendHumanDetection") {
@@ -378,6 +404,9 @@ void processLightEffects(JsonArray array){
   }
 }
 
+void audio_info(const char *info){
+    Serial.print("info        "); Serial.println(info);
+}
 void audio_eof_mp3(const char *info){  //end of file
     Serial.print("eof_mp3     ");Serial.println(info);
     audioControl.playNext();
