@@ -222,10 +222,6 @@ void setup() {
       if (doc.containsKey("authenticationToken")) {
         SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
 
-        processPlayList(doc["playlist"]);
-        processLightEffects(doc["lightEffects"]);
-        processUserMode(doc["userMode"]);
-
       }else if (doc["event"] == "SendLightEffect") {
 
         processLightEffects(doc["data"]);
@@ -246,7 +242,7 @@ void setup() {
 
       }else if(doc["event"] == "SendUserMode") {
         processUserMode(doc["data"]);
-      }else if(doc["event"] == "sendHumanDetection") {
+      }else if(doc["event"] == "SendHumanDetection") {
         JsonObject data = doc["data"];
 
         if(UserModeControl::getInstance().operationMode != EOperationMode::Default){
