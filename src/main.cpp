@@ -76,7 +76,6 @@ void audioTask(void* parms){
         Serial.println("updatePLAYLIST");   
         auto& list = msg->list;
         audioControl.setPlayList(list);
-        audioControl.playNext();
       }else if(msg->events == AudioMQEvents::UPDATE_ENABLE){
         if(msg->enable)
           audioControl.resume();
