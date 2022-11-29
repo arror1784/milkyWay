@@ -9,11 +9,11 @@
 #include "SDUtil.h"
 #include "SEN0153.h"
 
-static const String host = "192.168.219.112";
-static const int port = 6001;
-static const bool ssl = false;
+static const String host = "kira-api.wimcorp.dev";
+static const int port = 443;
+static const bool ssl = true;
 
-static const uint8_t send0153Address =  SEN0153_ADDRESS_DEFAULT;
+static const uint8_t send0153Address = SEN0153_ADDRESS_DEFAULT;
 static const int8_t sen0153RX = 16;
 static const int8_t sen0153TX = 17;
 
@@ -76,7 +76,7 @@ void setup() {
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
-        json["name"] = "Kira UltraSonic 1";
+        json["name"] = SDUtil::getInstance().getSerial();
         json["type"] = "HumanDetection";
 
         String strJson;
@@ -103,10 +103,6 @@ void setup() {
         Serial.println(String(payload, length));
         Serial.println("websocket errorReceived");
     });
-
-    String status = WifiModule::getInstance().connectWifi("301_main_2.4", "hongsamcoffee3*");
-
-    wsClient.connect();
 
     String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
     Serial.println(str);
@@ -146,22 +142,25 @@ void loop() {
     wsClient.loop();
 
     distance = ult.readDistance(send0153Address);
-    if(distance > 17 && distance < 750) {
-        if(isDetected) {
-            if(distance > sens) {
+    if (distance > 17 && distance < 750) {
+        if (isDetected) {
+            if (distance > sens) {
                 notSameCount += 1;
-            } else {
+            }
+            else {
                 notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
             }
-        } else if(!isDetected) {
-            if(distance <= sens) {
+        }
+        else if (!isDetected) {
+            if (distance <= sens) {
                 notSameCount += 1;
-            } else {
+            }
+            else {
                 notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
             }
         }
 
-        if(notSameCount > 5) {
+        if (notSameCount > 5) {
             isDetected = !isDetected;
             notSameCount = 0;
 
