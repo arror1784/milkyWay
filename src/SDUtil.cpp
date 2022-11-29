@@ -65,7 +65,9 @@ String SDUtil::readFile(const String &path) {
         Serial.println("− failed to open file for reading");
         return "";
     }
-    return file.readString();
+    String res = file.readString();
+    res.replace("\n", "");
+    return res;
 }
 
 bool SDUtil::exists(const String &path) {
