@@ -21,7 +21,7 @@ void SDUtil::init() {
 String SDUtil::getSerial() {
     if (_serial.length() == 0) {
         _serial = SDUtil::readFile(SDUtil::serialPath_);
-        Serial.println(SDUtil::serialPath_);
+        Serial.println("SDUtil::serialPath_ : " +SDUtil::serialPath_);
     }
     return _serial;
 }
@@ -65,7 +65,9 @@ String SDUtil::readFile(const String &path) {
         Serial.println("− failed to open file for reading");
         return "";
     }
-    return file.readString();
+    String res = file.readString();
+    res.replace("\n", "");
+    return res;
 }
 
 bool SDUtil::exists(const String &path) {
