@@ -64,7 +64,7 @@ void setup() {
     SDUtil::getInstance().init();
     Serial.println(SDUtil::getInstance().getSerial());
     WiFiClass::mode(WIFI_MODE_STA);
-    WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
+    WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
     WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
 
     wsClient.setHost(host);
