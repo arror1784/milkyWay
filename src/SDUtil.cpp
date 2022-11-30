@@ -40,7 +40,7 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
 
     int httpCode = httpClient.GET();
     if (httpCode == HTTP_CODE_OK) {
-        File file = SD.open((String("/") + id + "_" + filename).c_str(), FILE_WRITE);
+        File file = SD.open((String("/") + filename).c_str(), FILE_WRITE);
 
         httpClient.writeToStream(&file);
 

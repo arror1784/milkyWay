@@ -96,6 +96,7 @@ uint32_t Util::stringToRGBW(const String &string) {
   int white = 0x00 << 24;
   return red + green + blue + white;
 }
+
 void Util::taskDelay(const uint32_t time){
   
   TickType_t xLastWakeTime = xTaskGetTickCount();

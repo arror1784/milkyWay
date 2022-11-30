@@ -34,7 +34,7 @@ void AudioControl::setPlayList(Playlist& list){
 void AudioControl::playNext() {
     if(_playList.sounds.size() == 0)
         return;
-    _audio.connecttoFS(SD,String("/" + String(_playList.sounds[_listIndex].id) + "_" +_playList.sounds[_listIndex].filename).c_str());
+    _audio.connecttoFS(SD,String("/" + _playList.sounds[_listIndex].filename).c_str());
     _listIndex++;
     if(_listIndex >= _playList.sounds.size())
         _listIndex = 0;

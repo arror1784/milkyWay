@@ -39,6 +39,7 @@ void Neopixel::plotColorSet(LightEffect lightEffect,int colorSetIndex, uint8_t b
     }
     _strip.show();
 }
+
 void Neopixel::sync(uint8_t per){
     uint32_t c;
     uint8_t r, g, b;
@@ -55,6 +56,7 @@ void Neopixel::sync(uint8_t per){
     }
     _strip.show();
 }
+
 void Neopixel::plotColorSet(LightEffect lightEffect,int colorSetIndex) {
     plotColorSet(lightEffect,colorSetIndex, _maxBright);
 }
@@ -112,10 +114,6 @@ void Neopixel::blink(int blinks, unsigned int time)
         plotColorSet(_blinkingLightEffect, -1,0);
         Util::taskDelay(time);
     }
-}
-void Neopixel::initData(const LightEffect &lightEffect,ELightMode mode) {
-    setLightEffects(lightEffect);
-    _mode = mode;
 }
 
 void Neopixel::setLightEffects(const LightEffect &lightEffects){

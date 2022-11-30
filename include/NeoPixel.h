@@ -36,10 +36,8 @@ public:
 
     void sync(uint8_t per);
 
-    void initData(const LightEffect &lightEffect,ELightMode mode);
     void setLightEffects(const LightEffect &lightEffects);
     void changeMode(ELightMode mode);
-    const LightEffect &currentLightEffect();
     
     void loop();
 
