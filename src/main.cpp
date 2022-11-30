@@ -131,21 +131,21 @@ void shuffleTast(void *parm) {
     while (1) {
         ShuffleMsgData *msg = nullptr;
         ShuffleMsgData *temp = nullptr;
-        do
+        while(1)
         {
             temp = shuffleMsgQueue.recv();
             if (temp != nullptr) {
                 if(msg != nullptr)
                     delete msg;
                 msg = temp;
-                temp = nullptr;
+            }else{
+                break;
             }
-
-        } while (temp == nullptr);
-
+        }
         if(msg != nullptr){
             flag = msg->enable;
             delete msg;
+            msg = nullptr;
         }
         if(flag){
             AudioMsgData *dataA = new AudioMsgData();
