@@ -1,4 +1,4 @@
-#include "Neopixel.h"
+#include "NeoPixel.h"
 
 Neopixel::Neopixel(int nLed, int pin, neoPixelType type) : _nLed(nLed), _pin(pin), _strip(nLed, pin, type)
 {

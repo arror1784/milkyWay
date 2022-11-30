@@ -13,6 +13,7 @@
 
 #include "AudioMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
+#include "ShuffleMsgQueue.h"
 
 #define LED_PIN 32
 #define LED_LENGTH 24
@@ -123,42 +124,53 @@ void audioTask(void *parms) {
     vTaskDelete(NULL);
 }
 
+ShuffleMsgQueue shuffleMsgQueue(5);
 void shuffleTast(void *parm) {
     bool i = true;
+    bool flag = false;
     while (1) {
-        Serial.println("suffle test");
-        if (UserModeControl::getInstance().interactionMode != EInteractionMode::Shuffle) {
-            break;
+        ShuffleMsgData *msg;
+        do
+        {
+            msg = shuffleMsgQueue.recv();
+            if (msg != nullptr) {
+                if (msg->events == ShuffleSMQEvents::UPDATE_ENABLE) {
+                    Serial.println("updatePLAYLIST");
+                    flag = msg->enable;
+                }
+                delete msg;
+            }
+
+        } while (msg == nullptr);
+
+        if(flag){
+            AudioMsgData *dataA = new AudioMsgData();
+            dataA->list = Playlist();
+            dataA->events = AudioMQEvents::UPDATE_ENABLE;
+
+            NeoPixelMsgData *dataN = new NeoPixelMsgData();
+            dataN->list = LightEffect();
+            dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
+            dataN->mode = ELightMode::None;
+
+            if (i) {
+                i = false;
+                dataA->enable = false;
+                dataN->enable = true;
+            }
+            else {
+                i = true;
+                dataA->enable = true;
+                dataN->enable = false;
+            }
+
+            audioMsgQueue.send(dataA);
+            neoPixelMsgQueue.send(dataN);
+
+            Util::taskDelay(SUFFLE_TIMEOUT);
+        }else{
+            Util::taskDelay(100);
         }
-        if (UserModeControl::getInstance().operationMode != EOperationMode::Default
-            && UserModeControl::getInstance().humanDetection == false) {
-            break;
-        }
-
-        AudioMsgData *dataA = new AudioMsgData();
-        dataA->list = Playlist();
-        dataA->events = AudioMQEvents::UPDATE_ENABLE;
-
-        NeoPixelMsgData *dataN = new NeoPixelMsgData();
-        dataN->list = LightEffect();
-        dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
-        dataN->mode = ELightMode::None;
-
-        if (i) {
-            i = false;
-            dataA->enable = false;
-            dataN->enable = true;
-        }
-        else {
-            i = true;
-            dataA->enable = true;
-            dataN->enable = false;
-        }
-
-        audioMsgQueue.send(dataA);
-        neoPixelMsgQueue.send(dataN);
-
-        Util::taskDelay(SUFFLE_TIMEOUT);
     }
 
     vTaskDelete(NULL);
@@ -287,6 +299,9 @@ void setup() {
                 dataN->mode = ELightMode::None;
                 dataN->enable = false;
 
+                ShuffleMsgData *dataS = new ShuffleMsgData();
+                dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
+                dataS->enable = false;
 
                 if (UserModeControl::getInstance().humanDetection) {
 
@@ -300,7 +315,7 @@ void setup() {
                             dataA->enable = true;
                             break;
                         case EInteractionMode::Shuffle :
-                            xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
+                            dataS->enable = true;
                             break;
                         case EInteractionMode::Synchronization :
                             dataN->enable = false;
@@ -315,6 +330,7 @@ void setup() {
                 Serial.println(String("SendHumanDetection dataA->enable : ") + dataA->enable);
                 audioMsgQueue.send(dataA);
                 neoPixelMsgQueue.send(dataN);
+                shuffleMsgQueue.send(dataS);
             }
         }
     });
@@ -356,6 +372,7 @@ void setup() {
 
     xTaskCreate(neoPixelTask, "neoPixelTask", 10000, NULL, 0, NULL);
     xTaskCreate(audioTask, "audioTask", 50000, NULL, 0, NULL);
+    xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
 
 }
 
@@ -378,6 +395,10 @@ void processUserMode(JsonObject data) {
     dataN->mode = ELightMode::None;
     dataN->enable = false;
 
+    ShuffleMsgData *dataS = new ShuffleMsgData();
+    dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
+    dataS->enable = false;
+
     UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
     switch (UserModeControl::getInstance().interactionMode) {
         case EInteractionMode::LightOnly :
@@ -389,7 +410,8 @@ void processUserMode(JsonObject data) {
             dataA->enable = true;
             break;
         case EInteractionMode::Shuffle :
-            xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
+            // xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
+            dataS->enable = true;
             break;
         case EInteractionMode::Synchronization :
             dataN->enable = false;
@@ -400,6 +422,7 @@ void processUserMode(JsonObject data) {
     }
     audioMsgQueue.send(dataA);
     neoPixelMsgQueue.send(dataN);
+    shuffleMsgQueue.send(dataS);
 
     UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 
