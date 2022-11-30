@@ -94,7 +94,7 @@ void audioTask(void* parms){
         dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
         dataN->mode = ELightMode::None;
         auto absData = std::abs(audioControl.getLastGatin());
-        Serial.println(absData);
+//        Serial.println(absData);
         if(absData <= 1000){
           dataN->sync = 0;
         }else if(absData > 25000){
@@ -185,7 +185,7 @@ void setup() {
   SDUtil::getInstance().init();
   WiFiClass::mode(WIFI_MODE_STA);
   Serial.println(SDUtil::getInstance().getSerial());
-  WifiModule::getInstance().setIp("192.168.1.1", "192.168.1.1", "255.255.255.0");
+  WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
   WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
 
   wsClient.setHost(host);
