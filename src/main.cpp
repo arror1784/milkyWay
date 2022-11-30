@@ -129,20 +129,23 @@ void shuffleTast(void *parm) {
     bool i = true;
     bool flag = false;
     while (1) {
-        ShuffleMsgData *msg;
+        ShuffleMsgData *msg = nullptr;
+        ShuffleMsgData *temp = nullptr;
         do
         {
-            msg = shuffleMsgQueue.recv();
-            if (msg != nullptr) {
-                if (msg->events == ShuffleSMQEvents::UPDATE_ENABLE) {
-                    Serial.println("updatePLAYLIST");
-                    flag = msg->enable;
-                }
-                delete msg;
+            temp = shuffleMsgQueue.recv();
+            if (temp != nullptr) {
+                if(msg != nullptr)
+                    delete msg;
+                msg = temp;
             }
 
-        } while (msg == nullptr);
+        } while (temp == nullptr);
 
+        if(msg != nullptr){
+            flag = msg->enable;
+            delete msg;
+        }
         if(flag){
             AudioMsgData *dataA = new AudioMsgData();
             dataA->list = Playlist();
