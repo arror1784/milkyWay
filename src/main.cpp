@@ -166,7 +166,7 @@ void loop() {
 
             DynamicJsonDocument doc(512);
             JsonObject json = doc.to<JsonObject>();
-            json["event"] = "sendHumanDetection";
+            json["event"] = "SendHumanDetection";
             json["data"]["isDetected"] = isDetected;
 
             String strJson;
