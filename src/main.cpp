@@ -138,6 +138,7 @@ void shuffleTast(void *parm) {
                 if(msg != nullptr)
                     delete msg;
                 msg = temp;
+                temp = nullptr;
             }
 
         } while (temp == nullptr);
