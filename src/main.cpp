@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 #include <FFat.h>
 // #include <Arduino_FreeRTOS.h>
-#include<sstream>
+#include <sstream>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
@@ -45,7 +45,6 @@ void processLightEffects(JsonArray array);
 NeoPixelMsgQueue neoPixelMsgQueue(5);
 
 void neoPixelTask(void *parms) {
-
     Neopixel neopixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800);
 
     while (1) {
@@ -76,8 +75,10 @@ void neoPixelTask(void *parms) {
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
 
+int volume = 21;
+
 void audioTask(void *parms) {
-    audioControl.setVolume(10); // 0...21
+    audioControl.setVolume(volume); // 0...21
     TickType_t tick = xTaskGetTickCount();
 
     while (1) {
@@ -90,6 +91,7 @@ void audioTask(void *parms) {
                 audioControl.setPlayList(list);
             }
             else if (msg->events == AudioMQEvents::UPDATE_ENABLE) {
+//                Serial.println(String("msg->enable : ") + msg->enable);
                 if (msg->enable)
                     audioControl.resume();
                 else
@@ -106,17 +108,8 @@ void audioTask(void *parms) {
                 dataN->list = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
-                auto absData = std::abs(audioControl.getLastGatin());
-//        Serial.println(absData);
-                if (absData <= 1000) {
-                    dataN->sync = 0;
-                }
-                else if (absData > 25000) {
-                    dataN->sync = 255;
-                }
-                else {
-                    dataN->sync = map(std::abs(audioControl.getLastGatin()), 1000, 32766, 0, 255);
-                }
+                auto absData = std::abs(audioControl.getLastGatin()) / volume;
+                dataN->sync = absData;
                 neoPixelMsgQueue.send(dataN);
             }
         }
@@ -248,6 +241,7 @@ void setup() {
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
         Serial.println("websocket disconnected");
+        WifiModule::getInstance().start();
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
         Serial.println(String(payload, length));
@@ -355,7 +349,6 @@ void setup() {
         x.push_back(stringBuffer);
     }
     if (x.size() == 2) {
-
         String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
         if (status != "WL_CONNECTED") {
             Serial.println("wifi connect fail");
@@ -374,10 +367,9 @@ void setup() {
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
     webServer.begin();
 
-    xTaskCreate(neoPixelTask, "neoPixelTask", 10000, NULL, 0, NULL);
-    xTaskCreate(audioTask, "audioTask", 50000, NULL, 0, NULL);
-    xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
-
+    xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 10000, NULL, 0, NULL, 0);
+    xTaskCreatePinnedToCore(shuffleTast, "shuffleTask", 10000, NULL, 0, NULL, 0);
+    xTaskCreatePinnedToCore(audioTask, "audioTask", 50000, NULL, 1, NULL, 1);
 }
 
 void loop() {
