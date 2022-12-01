@@ -35,7 +35,7 @@ uint16_t SEN0153::readDistance(uint8_t address) {
     if (address != address_recv || cmd_recv != SEN0153_CMD_READ_DISTANCE || dLen_recv != 0x02)
         return 0;
 
-    return (uint16_t) data_recv[1];
+    return (uint16_t) data_recv[0] << 8 | data_recv[1];
 }
 
 float_t SEN0153::readTemperature(uint8_t address) {

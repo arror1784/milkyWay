@@ -6,7 +6,7 @@ void WifiModule::start() {
   Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
 
   Serial.print("Setting soft-AP ... ");
-  Serial.println(WiFi.softAP(_ssid.c_str(), NULL) ? "Ready" : "Failed!");
+  Serial.println(WiFi.softAP(_ssid.c_str(), "kirakira") ? "Ready" : "Failed!");
 
   Serial.print("Soft-AP IP address = ");
   Serial.println(WiFi.softAPIP());

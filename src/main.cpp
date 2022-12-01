@@ -4,6 +4,7 @@
 #include <SPIFFS.h>
 #include <WebServer.h>
 
+#include "ArduiKalman.h"
 #include "WebSocketClient.h"
 #include "WifiModule.h"
 #include "SDUtil.h"
@@ -29,6 +30,10 @@ int sens = 70;
 uint16_t distance = 0;
 bool isDetected = false;
 int notSameCount = 0;
+int minimum = 30;
+int maximum = 300;
+
+bool isWebsocketConnected = false;
 
 void receiveWifi() {
     if (!webServer.hasArg("plain")) {
@@ -53,7 +58,6 @@ void receiveWifi() {
             return;
         }
 
-        WifiModule::getInstance().stop();
         wsClient.connect();
         webServer.send(200);
     }
@@ -63,7 +67,7 @@ void receiveWifi() {
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(19200);
 
     SDUtil::getInstance().init();
     Serial.println(SDUtil::getInstance().getSerial());
@@ -87,12 +91,17 @@ void setup() {
         serializeJson(json, strJson);
 
         wsClient.sendText(strJson);
+        WifiModule::getInstance().stop();
 
+        isWebsocketConnected = true;
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
         Serial.println("websocket disconnected");
-        wsClient.disconnect();
-        WifiModule::getInstance().start();
+        if(isWebsocketConnected) {
+            wsClient.disconnect();
+            WifiModule::getInstance().start();
+            isWebsocketConnected = false;
+        }
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
         Serial.println(String(payload, length));
@@ -147,38 +156,8 @@ void loop() {
     wsClient.loop();
 
     distance = ult.readDistance(send0153Address);
-    if (distance > 17 && distance < 750) {
-        if (isDetected) {
-            if (distance > sens) {
-                notSameCount += 1;
-            }
-            else {
-                notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
-            }
-        }
-        else if (!isDetected) {
-            if (distance <= sens) {
-                notSameCount += 1;
-            }
-            else {
-                notSameCount = notSameCount > 0 ? notSameCount - 1 : 0;
-            }
-        }
-
-        if (notSameCount > 5) {
-            isDetected = !isDetected;
-            notSameCount = 0;
-
-            DynamicJsonDocument doc(512);
-            JsonObject json = doc.to<JsonObject>();
-            json["event"] = "SendHumanDetection";
-            json["data"]["isDetected"] = isDetected;
-
-            String strJson;
-            serializeJson(json, strJson);
-
-            wsClient.sendText(strJson);
-        }
+    if(distance > minimum && distance < maximum) {
+        Serial.println(String("distance : ") + distance);
     }
-    delay(100);
+    delay(50);
 }

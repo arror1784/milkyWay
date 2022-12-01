@@ -4,6 +4,7 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/SimpleTimer" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/include/SimpleTimer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Arduino-KalmanFilter" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/SimpleTimer" vcs="Git" />
   </component>
 </project>
