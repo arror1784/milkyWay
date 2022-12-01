@@ -1,7 +1,6 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <FFat.h>
-// #include <Arduino_FreeRTOS.h>
 #include <sstream>
 
 #include "WebSocketClient.h"
@@ -22,9 +21,6 @@
 #define I2S_BCLK      0
 #define I2S_LRC       4
 
-#define SOCKET_SUCESS_BIT   (1UL << 0UL) // zero shift for bit0
-#define SOCKET_FAIL_BIT   (1UL << 1UL) // 1 shift for flag  bit 1
-
 #define SUFFLE_TIMEOUT 5500
 
 static const String host = "192.168.219.108";
@@ -44,7 +40,7 @@ void processLightEffects(JsonArray array);
 
 NeoPixelMsgQueue neoPixelMsgQueue(5);
 
-void neoPixelTask(void *parms) {
+void neoPixelTask(void *params) {
     Neopixel neopixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800);
 
     while (1) {
@@ -69,7 +65,7 @@ void neoPixelTask(void *parms) {
         neopixel.loop();
     }
 
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }
 
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
@@ -77,7 +73,7 @@ AudioMsgQueue audioMsgQueue(5);
 
 int volume = 21;
 
-void audioTask(void *parms) {
+void audioTask(void *params) {
     audioControl.setVolume(volume); // 0...21
     TickType_t tick = xTaskGetTickCount();
 
@@ -104,7 +100,7 @@ void audioTask(void *parms) {
         if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
                 tick = xTaskGetTickCount();
-                NeoPixelMsgData *dataN = new NeoPixelMsgData();
+                auto *dataN = new NeoPixelMsgData();
                 dataN->list = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
@@ -114,38 +110,39 @@ void audioTask(void *parms) {
             }
         }
     }
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }
 
 ShuffleMsgQueue shuffleMsgQueue(5);
-void shuffleTast(void *parm) {
+
+void shuffleTask(void *params) {
     bool i = true;
     bool flag = false;
     while (1) {
         ShuffleMsgData *msg = nullptr;
         ShuffleMsgData *temp = nullptr;
-        while(1)
-        {
+        while (1) {
             temp = shuffleMsgQueue.recv();
             if (temp != nullptr) {
-                if(msg != nullptr)
+                if (msg != nullptr)
                     delete msg;
                 msg = temp;
-            }else{
+            }
+            else {
                 break;
             }
         }
-        if(msg != nullptr){
+        if (msg != nullptr) {
             flag = msg->enable;
             delete msg;
             msg = nullptr;
         }
-        if(flag){
-            AudioMsgData *dataA = new AudioMsgData();
+        if (flag) {
+            auto *dataA = new AudioMsgData();
             dataA->list = Playlist();
             dataA->events = AudioMQEvents::UPDATE_ENABLE;
 
-            NeoPixelMsgData *dataN = new NeoPixelMsgData();
+            auto *dataN = new NeoPixelMsgData();
             dataN->list = LightEffect();
             dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
             dataN->mode = ELightMode::None;
@@ -165,19 +162,19 @@ void shuffleTast(void *parm) {
             neoPixelMsgQueue.send(dataN);
 
             Util::taskDelay(SUFFLE_TIMEOUT);
-        }else{
+        }
+        else {
             Util::taskDelay(100);
         }
     }
 
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }
 
 WebSocketClient wsClient;
 WebServer webServer(80);
 
 void receiveWifi() {
-
     if (!webServer.hasArg("plain")) {
         webServer.send(400, "text/plain", "no plainBody");
         return;
@@ -187,11 +184,11 @@ void receiveWifi() {
     deserializeJson(doc, plainBody);
 
     if (doc.containsKey("ssid") && doc.containsKey("password")) {
+        String strPayload;
 
-        String ssid = doc["ssid"];
-        String password = doc["password"];
+        serializeJson(doc, strPayload);
 
-        SDUtil::writeFile(SDUtil::wifiInfoPath_, ssid + " " + password);
+        SDUtil::writeFile(SDUtil::wifiInfoPath_, strPayload);
 
         String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
 
@@ -200,7 +197,6 @@ void receiveWifi() {
             return;
         }
 
-        WifiModule::getInstance().stop();
         wsClient.connect();
         webServer.send(200);
     }
@@ -217,15 +213,14 @@ void setup() {
     Serial.println(SDUtil::getInstance().getSerial());
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
     WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
+    WifiModule::getInstance().start();
 
     wsClient.setHost(host);
     wsClient.setPort(port);
     wsClient.setWithSsl(ssl);
     wsClient.onConnected([&](uint8_t *payload, size_t length) {
-
         Serial.println("websocket connected");
 
-        //todo serial
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
@@ -237,11 +232,9 @@ void setup() {
         serializeJson(json, strJson);
 
         wsClient.sendText(strJson);
-
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
         Serial.println("websocket disconnected");
-        WifiModule::getInstance().start();
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
         Serial.println(String(payload, length));
@@ -258,15 +251,14 @@ void setup() {
 
         }
         else if (doc["event"] == "SendSound") {
-            JsonObject data = doc["data"];
-
-            String protocol = ssl ? "https://" : "http://";
-            long userId = data["userId"];
-            int id = data["id"];
-            String filename = data["filename"];
-            String url = protocol + host + ":" + port + "/api/sound/file/";
-
-            SDUtil::downloadFile(url, id, filename);
+//            JsonObject data = doc["data"];
+//
+//            auto *audioDownloadMsg = new AudioDownloadMsgData();
+//
+//            audioDownloadMsg->id = data["id"];
+//            audioDownloadMsg->filename = String(data["filename"]);
+//
+//            audioDownloadMsgQueue.send(audioDownloadMsg);
         }
         else if (doc["event"] == "SendPlaylist") {
 
@@ -286,23 +278,22 @@ void setup() {
                     UserModeControl::getInstance().humanDetection = data["isDetected"];
 
 
-                AudioMsgData *dataA = new AudioMsgData();
+                auto *dataA = new AudioMsgData();
                 dataA->list = Playlist();
                 dataA->events = AudioMQEvents::UPDATE_ENABLE;
                 dataA->enable = false;
 
-                NeoPixelMsgData *dataN = new NeoPixelMsgData();
+                auto *dataN = new NeoPixelMsgData();
                 dataN->list = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
                 dataN->mode = ELightMode::None;
                 dataN->enable = false;
 
-                ShuffleMsgData *dataS = new ShuffleMsgData();
+                auto *dataS = new ShuffleMsgData();
                 dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
                 dataS->enable = false;
 
                 if (UserModeControl::getInstance().humanDetection) {
-
                     switch (UserModeControl::getInstance().interactionMode) {
                         case EInteractionMode::LightOnly :
                             dataN->enable = true;
@@ -338,21 +329,14 @@ void setup() {
     });
 
     String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
-    Serial.println(str);
-    std::string s(str.c_str(), str.length());
-    std::istringstream ss(s);
-    std::string stringBuffer;
-    std::vector<std::string> x;
-    x.clear();
 
-    while (getline(ss, stringBuffer, ' ')) {
-        x.push_back(stringBuffer);
-    }
-    if (x.size() == 2) {
-        String status = WifiModule::getInstance().connectWifi(x[0].c_str(), x[1].c_str());
+    DynamicJsonDocument doc = DynamicJsonDocument(str.length() * 2);
+    deserializeJson(doc, str);
+
+    if (!doc.isNull()) {
+        String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
         if (status != "WL_CONNECTED") {
             Serial.println("wifi connect fail");
-            WifiModule::getInstance().start();
         }
         else {
             Serial.println("wifi connect");
@@ -360,38 +344,35 @@ void setup() {
         }
     }
     else {
-        Serial.println("there is no wifi passwd");
-        WifiModule::getInstance().start();
+        Serial.println("there is no wifi info");
     }
 
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
     webServer.begin();
 
-    xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 10000, NULL, 0, NULL, 0);
-    xTaskCreatePinnedToCore(shuffleTast, "shuffleTask", 10000, NULL, 0, NULL, 0);
-    xTaskCreatePinnedToCore(audioTask, "audioTask", 50000, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
+    xTaskCreatePinnedToCore(shuffleTask, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
+    xTaskCreatePinnedToCore(audioTask, "audioTask", 100000, nullptr, 1, nullptr, 1);
 }
 
 void loop() {
     webServer.handleClient();
     wsClient.loop();
-
 }
 
 void processUserMode(JsonObject data) {
-
-    AudioMsgData *dataA = new AudioMsgData();
+    auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
     dataA->events = AudioMQEvents::UPDATE_ENABLE;
     dataA->enable = false;
 
-    NeoPixelMsgData *dataN = new NeoPixelMsgData();
+    auto *dataN = new NeoPixelMsgData();
     dataN->list = LightEffect();
     dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
     dataN->mode = ELightMode::None;
     dataN->enable = false;
 
-    ShuffleMsgData *dataS = new ShuffleMsgData();
+    auto *dataS = new ShuffleMsgData();
     dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
     dataS->enable = false;
 
@@ -406,7 +387,6 @@ void processUserMode(JsonObject data) {
             dataA->enable = true;
             break;
         case EInteractionMode::Shuffle :
-            // xTaskCreate(shuffleTast, "shuffleTast", 10000, NULL, 0, NULL);
             dataS->enable = true;
             break;
         case EInteractionMode::Synchronization :
@@ -422,7 +402,7 @@ void processUserMode(JsonObject data) {
 
     UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 
-    NeoPixelMsgData *dataN2 = new NeoPixelMsgData();
+    auto *dataN2 = new NeoPixelMsgData();
     dataN2->list = LightEffect();
     dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
     dataN2->mode = Util::stringToELightMode(data["lightMode"]);

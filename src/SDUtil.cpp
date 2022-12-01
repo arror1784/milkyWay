@@ -7,7 +7,7 @@
 
 String SDUtil::authenticationToken_;
 
-const String SDUtil::wifiInfoPath_ = "/WIFI";
+const String SDUtil::wifiInfoPath_ = "/WIFI.json";
 const String SDUtil::serialPath_ = "/SERIAL";
 
 void SDUtil::init() {
@@ -36,17 +36,19 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
 
     HTTPClient httpClient;
     httpClient.begin(url);
+    httpClient.setReuse(true);
     httpClient.addHeader("Authorization", String("Bearer ") + SDUtil::authenticationToken_);
 
     int httpCode = httpClient.GET();
     if (httpCode == HTTP_CODE_OK) {
-        File file = SD.open((String("/") + filename).c_str(), FILE_WRITE);
+        File file = SD.open(("/" + filename).c_str(), FILE_WRITE);
 
         httpClient.writeToStream(&file);
 
         file.close();
 
         Serial.println("download file finish");
+
         return true;
     }
     Serial.println("http get fail : " + String(httpCode));
