@@ -17,7 +17,11 @@ void WifiModule::stop() {
 }
 
 String WifiModule::connectWifi(const String &ssid, const String &password) {
-  WiFi.begin(ssid.c_str(), password.c_str());
+  if(password.isEmpty()) {
+      WiFi.begin(ssid.c_str());
+  } else {
+      WiFi.begin(ssid.c_str(), password.c_str());
+  }
 
   for(int j = 0; j < 3 ; j++){
     Serial.println("try connect");

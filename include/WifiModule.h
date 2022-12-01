@@ -24,7 +24,7 @@ public:
 
   void stop();
 
-  String connectWifi(const String &ssid, const String &password);
+  String connectWifi(const String &ssid, const String &password = "");
 
   void disconnectWifi();
 
