@@ -32,6 +32,10 @@ void WebSocketClient::connect() {
   }
 }
 
+void WebSocketClient::disconnect() {
+    _client.disconnect();
+}
+
 void WebSocketClient::loop() {
   return _client.loop();
 }

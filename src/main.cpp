@@ -9,9 +9,13 @@
 #include "SDUtil.h"
 #include "SEN0153.h"
 
-static const String host = "kira-api.wimcorp.dev";
-static const int port = 443;
-static const bool ssl = true;
+static const String host = "192.168.0.20";
+static const int port = 6001;
+static const bool ssl = false;
+
+//static const String host = "kira-api.wimcorp.dev";
+//static const int port = 443;
+//static const bool ssl = true;
 
 static const uint8_t send0153Address = SEN0153_ADDRESS_DEFAULT;
 static const int8_t sen0153RX = 16;
@@ -87,6 +91,7 @@ void setup() {
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
         Serial.println("websocket disconnected");
+        wsClient.disconnect();
         WifiModule::getInstance().start();
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {

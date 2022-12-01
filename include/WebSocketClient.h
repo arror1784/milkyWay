@@ -16,6 +16,8 @@ public:
 
   void connect();
 
+  void disconnect();
+
   void loop();
 
   bool isConnected();
@@ -27,7 +29,7 @@ public:
   void setWithSsl(bool withSsl);
 
   void sendText(String txt);
-  
+
   typedef std::function<void(uint8_t *, size_t)> webSocketReceiveCB;
 
   void onTextMessageReceived(webSocketReceiveCB cb){_webSockectReceiveText = cb;};
@@ -52,7 +54,6 @@ private:
   std::optional<webSocketReceiveCB> _webSockectReceiveConnected;
   std::optional<webSocketReceiveCB> _webSockectReceiveDisconnected;
   std::optional<webSocketReceiveCB> _webSockectReceiveError;
-
 };
 
 
