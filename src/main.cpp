@@ -25,7 +25,7 @@
 
 #define SUFFLE_TIMEOUT 5500
 
-static const String host = "192.168.219.108";
+static const String host = "192.168.0.195";
 static const int port = 6001;
 static const bool ssl = false;
 
