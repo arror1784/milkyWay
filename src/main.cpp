@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <FFat.h>
 #include <sstream>
+#include <WiFiMulti.h>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
@@ -11,6 +12,7 @@
 #include "UserModeControl.h"
 
 #include "AudioMsgQueue.h"
+#include "AudioDownloadMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "ShuffleMsgQueue.h"
 
@@ -31,12 +33,6 @@ static const bool ssl = false;
 //static const int port = 443;
 //static const bool ssl = true;
 static const int syncUpdateResolution = 10;
-
-void processUserMode(JsonObject data);
-
-void processPlayList(JsonObject data);
-
-void processLightEffects(JsonArray array);
 
 NeoPixelMsgQueue neoPixelMsgQueue(5);
 
@@ -71,7 +67,7 @@ void neoPixelTask(void *params) {
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
 
-int volume = 21;
+int volume = 7;
 
 void audioTask(void *params) {
     audioControl.setVolume(volume); // 0...21
@@ -171,8 +167,110 @@ void shuffleTask(void *params) {
     vTaskDelete(nullptr);
 }
 
+AudioDownloadMsgQueue audioDownloadMsgQueue(5);
+
+void processUserMode(const JsonObject &data) {
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = AudioMQEvents::UPDATE_ENABLE;
+    dataA->enable = false;
+
+    auto *dataN = new NeoPixelMsgData();
+    dataN->list = LightEffect();
+    dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
+    dataN->mode = ELightMode::None;
+    dataN->enable = false;
+
+    auto *dataS = new ShuffleMsgData();
+    dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
+    dataS->enable = false;
+
+    UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
+    switch (UserModeControl::getInstance().interactionMode) {
+        case EInteractionMode::LightOnly :
+            dataN->enable = true;
+            dataA->enable = false;
+            break;
+        case EInteractionMode::SoundOnly :
+            dataN->enable = false;
+            dataA->enable = true;
+            break;
+        case EInteractionMode::Shuffle :
+            dataS->enable = true;
+            break;
+        case EInteractionMode::Synchronization :
+            dataN->enable = false;
+            dataA->enable = true;
+            break;
+        default:
+            break;
+    }
+    audioMsgQueue.send(dataA);
+    neoPixelMsgQueue.send(dataN);
+    shuffleMsgQueue.send(dataS);
+
+    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
+
+    auto *dataN2 = new NeoPixelMsgData();
+    dataN2->list = LightEffect();
+    dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
+    dataN2->mode = Util::stringToELightMode(data["lightMode"]);
+
+    neoPixelMsgQueue.send(dataN2);
+
+}
+
+void processPlayList(const JsonObject &data) {
+    auto dataA = new AudioMsgData();
+    dataA->list = WebSocketClient::parsePlayList(data);
+    dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
+
+    audioMsgQueue.send(dataA);
+}
+
+void processLightEffects(const JsonArray &array) {
+    for (auto jsonLightEffect: array) {
+        auto *dataN = new NeoPixelMsgData();
+        dataN->list = WebSocketClient::parseLightEffect(jsonLightEffect);
+        dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+        dataN->mode = ELightMode::None;
+
+        neoPixelMsgQueue.send(dataN);
+    }
+}
+
 WebSocketClient wsClient;
 WebServer webServer(80);
+
+bool connectWifiBySdData() {
+    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
+
+    DynamicJsonDocument doc = DynamicJsonDocument(str.length() * 2);
+    deserializeJson(doc, str);
+
+    if (doc.isNull()) {
+        Serial.println("there is no wifi info");
+        return false;
+    }
+
+    Serial.print("ssid : ");
+    Serial.println(String(doc["ssid"]));
+    Serial.print("password : ");
+    Serial.println(String(doc["password"]));
+
+    String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
+
+    if (status != "WL_CONNECTED") {
+        Serial.println("wifi connect fail");
+        WifiModule::getInstance().start();
+        return false;
+    }
+
+    Serial.println("wifi connect");
+    WifiModule::getInstance().stop();
+    wsClient.connect();
+    return true;
+}
 
 void receiveWifi() {
     if (!webServer.hasArg("plain")) {
@@ -190,20 +288,20 @@ void receiveWifi() {
 
         SDUtil::writeFile(SDUtil::wifiInfoPath_, strPayload);
 
-        String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
+        bool status = connectWifiBySdData();
 
-        if (status != "WL_CONNECTED") {
+        if (!status) {
             webServer.send(400, "text/plain", "network connect fail");
             return;
         }
-
-        wsClient.connect();
         webServer.send(200);
     }
     else {
         webServer.send(400, "text/plain", "wrong json data");
     }
 }
+
+bool isFirstConnection = true;
 
 void setup() {
     Serial.begin(115200);
@@ -213,7 +311,9 @@ void setup() {
     Serial.println(SDUtil::getInstance().getSerial());
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
     WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
-    WifiModule::getInstance().start();
+
+    webServer.on("/wifi", HTTP_POST, &receiveWifi);
+    webServer.begin();
 
     wsClient.setHost(host);
     wsClient.setPort(port);
@@ -224,7 +324,8 @@ void setup() {
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
-        json["name"] = SDUtil::readFile(SDUtil::serialPath_);
+        json["name"] = SDUtil::getInstance().getSerial();
+        json["isFirstConnection"] = isFirstConnection;
         Serial.println(String(json["name"]));
         json["type"] = "Mirror";
 
@@ -232,6 +333,8 @@ void setup() {
         serializeJson(json, strJson);
 
         wsClient.sendText(strJson);
+
+        isFirstConnection = false;
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
         Serial.println("websocket disconnected");
@@ -246,24 +349,20 @@ void setup() {
             SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
         }
         else if (doc["event"] == "SendLightEffect") {
-
             processLightEffects(doc["data"]);
-
         }
         else if (doc["event"] == "SendSound") {
-//            JsonObject data = doc["data"];
-//
-//            auto *audioDownloadMsg = new AudioDownloadMsgData();
-//
-//            audioDownloadMsg->id = data["id"];
-//            audioDownloadMsg->filename = String(data["filename"]);
-//
-//            audioDownloadMsgQueue.send(audioDownloadMsg);
+            JsonObject data = doc["data"];
+
+            auto *audioDownloadMsg = new AudioDownloadMsgData();
+
+            audioDownloadMsg->id = data["id"];
+            audioDownloadMsg->filename = String(data["filename"]);
+
+            audioDownloadMsgQueue.send(audioDownloadMsg);
         }
         else if (doc["event"] == "SendPlaylist") {
-
             processPlayList(doc["data"]);
-
         }
         else if (doc["event"] == "SendUserMode") {
             processUserMode(doc["data"]);
@@ -328,108 +427,37 @@ void setup() {
         Serial.println("websocket errorReceived");
     });
 
-    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
-
-    DynamicJsonDocument doc = DynamicJsonDocument(str.length() * 2);
-    deserializeJson(doc, str);
-
-    if (!doc.isNull()) {
-        String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
-        if (status != "WL_CONNECTED") {
-            Serial.println("wifi connect fail");
-        }
-        else {
-            Serial.println("wifi connect");
-            wsClient.connect();
-        }
-    }
-    else {
-        Serial.println("there is no wifi info");
-    }
-
-    webServer.on("/wifi", HTTP_POST, &receiveWifi);
-    webServer.begin();
-
     xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore(shuffleTask, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
-    xTaskCreatePinnedToCore(audioTask, "audioTask", 100000, nullptr, 1, nullptr, 1);
+    xTaskCreatePinnedToCore(audioTask, "audioTask", 10000, nullptr, 1, nullptr, 1);
 }
 
 void loop() {
     webServer.handleClient();
     wsClient.loop();
-}
 
-void processUserMode(JsonObject data) {
-    auto *dataA = new AudioMsgData();
-    dataA->list = Playlist();
-    dataA->events = AudioMQEvents::UPDATE_ENABLE;
-    dataA->enable = false;
+    // TODO: 큐를 임베디드 기기가 아닌 서버에서 구현하고, 이를 패치해 오는 방식을 바꾸는 것도 고려
 
-    auto *dataN = new NeoPixelMsgData();
-    dataN->list = LightEffect();
-    dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
-    dataN->mode = ELightMode::None;
-    dataN->enable = false;
+    AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
+    if (WifiModule::getInstance().isConnectedST()) {
+        if (msg != nullptr) {
+            String protocol = ssl ? "https://" : "http://";
+            int id = msg->id;
+            String filename = msg->filename;
+            String url = protocol + host + ":" + port + "/api/sound/file/";
 
-    auto *dataS = new ShuffleMsgData();
-    dataS->events = ShuffleSMQEvents::UPDATE_ENABLE;
-    dataS->enable = false;
+            bool status = SDUtil::downloadFile(url, id, filename);
 
-    UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
-    switch (UserModeControl::getInstance().interactionMode) {
-        case EInteractionMode::LightOnly :
-            dataN->enable = true;
-            dataA->enable = false;
-            break;
-        case EInteractionMode::SoundOnly :
-            dataN->enable = false;
-            dataA->enable = true;
-            break;
-        case EInteractionMode::Shuffle :
-            dataS->enable = true;
-            break;
-        case EInteractionMode::Synchronization :
-            dataN->enable = false;
-            dataA->enable = true;
-            break;
-        default:
-            break;
+            if (!status) {
+                audioDownloadMsgQueue.send(msg);
+            }
+            else {
+                delete msg;
+            }
+        }
     }
-    audioMsgQueue.send(dataA);
-    neoPixelMsgQueue.send(dataN);
-    shuffleMsgQueue.send(dataS);
-
-    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
-
-    auto *dataN2 = new NeoPixelMsgData();
-    dataN2->list = LightEffect();
-    dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
-    dataN2->mode = Util::stringToELightMode(data["lightMode"]);
-
-    neoPixelMsgQueue.send(dataN2);
-
-}
-
-void processPlayList(JsonObject data) {
-
-    AudioMsgData *dataA = new AudioMsgData();
-    dataA->list = WebSocketClient::parsePlayList(data);
-    dataA->events = AudioMQEvents::UPDATE_PLAYLIST;
-
-    audioMsgQueue.send(dataA);
-}
-
-void processLightEffects(JsonArray array) {
-    for (int i = 0; i < array.size(); i++) {
-
-        NeoPixelMsgData *dataN = new NeoPixelMsgData();
-        dataN->list = WebSocketClient::parseLightEffect(array[i]);
-        dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
-
-        neoPixelMsgQueue.send(dataN);
-
+    else {
+        connectWifiBySdData();
     }
 }
 

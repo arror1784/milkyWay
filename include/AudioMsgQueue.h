@@ -8,12 +8,12 @@
 #include "MsgQueue.h"
 #include "AudioControl.h"
 
-enum class AudioMQEvents{
-  UPDATE_ENABLE = 0,
-  UPDATE_PLAYLIST = 1
+enum class AudioMQEvents {
+    UPDATE_ENABLE = 0,
+    UPDATE_PLAYLIST = 1,
 };
 
-class AudioMsgData{
+class AudioMsgData {
 public:
     Playlist list;
     AudioMQEvents events;
@@ -22,8 +22,7 @@ public:
 
 class AudioMsgQueue : public MsgQueue<AudioMsgData> {
 public:
-    AudioMsgQueue(int length) : MsgQueue(length, sizeof(AudioMsgData*)) {
-    }
+    AudioMsgQueue(int length) : MsgQueue(length, sizeof(AudioMsgData *)) {}
 };
 
 

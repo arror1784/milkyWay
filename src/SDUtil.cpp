@@ -25,7 +25,6 @@ String SDUtil::getSerial() {
     return _serial;
 }
 
-
 bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     String parsedFileName = String(filename);
     parsedFileName.replace(" ", "%20");
@@ -43,15 +42,26 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     if (httpCode == HTTP_CODE_OK) {
         File file = SD.open(("/" + filename).c_str(), FILE_WRITE);
 
-        httpClient.writeToStream(&file);
+//        if(file.size() > 0) {
+//            file.flush();
+//        }
+
+        int status = httpClient.writeToStream(&file);
 
         file.close();
+        httpClient.end();
+        if(status < 0) {
+            Serial.println("http writeToStream fail : " + String(status));
+            return false;
+        }
 
-        Serial.println("download file finish");
+        Serial.println("download file finish : " + String(status));
 
         return true;
     }
     Serial.println("http get fail : " + String(httpCode));
+    httpClient.end();
+
     return false;
 }
 
