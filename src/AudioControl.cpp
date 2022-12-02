@@ -40,12 +40,15 @@ void AudioControl::resume() {
 };
 
 void AudioControl::playNext() {
-    if (_playList.sounds.empty())
-        return;
+    if (_playList.sounds.empty()) return;
+
+    if (_playList.isShuffle) {
+        _listIndex = random(_playList.sounds.size());
+    } else {
+        _listIndex++;
+        if (_listIndex >= _playList.sounds.size()) _listIndex = 0;
+    }
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
-    _listIndex++;
-    if (_listIndex >= _playList.sounds.size())
-        _listIndex = 0;
 }
 
 void AudioControl::loop() {
