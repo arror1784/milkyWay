@@ -2,7 +2,6 @@
 #include <ArduinoJson.h>
 #include <FFat.h>
 #include <sstream>
-#include <WiFiMulti.h>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
@@ -67,7 +66,7 @@ void neoPixelTask(void *params) {
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
 
-int volume = 7;
+int volume = 18;
 
 void audioTask(void *params) {
     audioControl.setVolume(volume); // 0...21
@@ -75,8 +74,16 @@ void audioTask(void *params) {
 
     while (1) {
         AudioMsgData *msg = audioMsgQueue.recv();
-        if (msg != nullptr) {
 
+        if (audioControl.isDownloading()) {
+            if (msg != nullptr) delete msg;
+
+            continue;
+        }
+
+        audioControl.loop();
+
+        if (msg != nullptr) {
             if (msg->events == AudioMQEvents::UPDATE_PLAYLIST) {
                 Serial.println("updatePLAYLIST");
                 auto &list = msg->list;
@@ -84,15 +91,17 @@ void audioTask(void *params) {
             }
             else if (msg->events == AudioMQEvents::UPDATE_ENABLE) {
 //                Serial.println(String("msg->enable : ") + msg->enable);
-                if (msg->enable)
-                    audioControl.resume();
-                else
-                    audioControl.pause();
+                if (!audioControl.isDownloading()) {
+                    if (msg->enable)
+                        audioControl.resume();
+                    else
+                        audioControl.pause();
+                }
             }
 
             delete msg;
         }
-        audioControl.loop();
+
         if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
                 tick = xTaskGetTickCount();
@@ -100,7 +109,7 @@ void audioTask(void *params) {
                 dataN->list = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
-                auto absData = std::abs(audioControl.getLastGatin()) / volume;
+                auto absData = std::abs(audioControl.getLastGain()) / volume;
                 dataN->sync = absData;
                 neoPixelMsgQueue.send(dataN);
             }
@@ -430,6 +439,7 @@ void setup() {
     xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore(shuffleTask, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore(audioTask, "audioTask", 10000, nullptr, 1, nullptr, 1);
+    connectWifiBySdData();
 }
 
 void loop() {
@@ -441,6 +451,8 @@ void loop() {
     AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
     if (WifiModule::getInstance().isConnectedST()) {
         if (msg != nullptr) {
+            audioControl.setIsDownloading(true);
+
             String protocol = ssl ? "https://" : "http://";
             int id = msg->id;
             String filename = msg->filename;
@@ -452,6 +464,8 @@ void loop() {
                 audioDownloadMsgQueue.send(msg);
             }
             else {
+                audioControl.setIsDownloading(false);
+
                 delete msg;
             }
         }

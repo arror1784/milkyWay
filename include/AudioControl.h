@@ -5,44 +5,41 @@
 
 class Sound {
 public:
-  String filename;
-  int id;
+    String filename;
+    int id;
 };
 
 class Playlist {
 public:
-  long id;
-  bool isShuffle;
-  std::vector<Sound> sounds;
+    long id;
+    bool isShuffle;
+    std::vector<Sound> sounds;
 };
 
-class AudioControl{
+class AudioControl {
 
 public:
-    AudioControl(int lrcPin,int blckPin,int doutPin);
+    AudioControl(int lrcPin, int blckPin, int doutPin);
 
     void setVolume(uint8_t volume);
 
-    void setPlayList(Playlist& list);
-    void pause(){
-      if(_isResume){
-        _isResume = false;
-        _audio.pauseResume();
-      }
-    };
-    void resume(){
-      if(!_isResume){
-        _isResume = true;
-        _audio.pauseResume();
-      }
-    };
-    
+    void setPlayList(Playlist &list);
+
+    void pause();
+
+    void resume();
+
     void playNext();
-    
+
     void loop();
-    int16_t getLastGatin(){
-      return _audio.getLastGain();
-    }
+
+    int16_t getLastGain();
+
+    bool isPlaying();
+
+    bool isDownloading();
+
+    void setIsDownloading(bool isDownloading);
 
 private:
     Audio _audio;
@@ -51,13 +48,14 @@ private:
     int _listIndex = 1;
 
     bool _isResume = true;
+    bool _isDownloading = false;
 
     Playlist _playList;
-    
+
     const int _lrcPin;
     const int _blckPin;
     const int _doutPin;
-    
+
     static const uint8_t maxVolume_ = 21;
     static const uint8_t minVolume_ = 0;
 };

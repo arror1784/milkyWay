@@ -33,6 +33,8 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
 
     Serial.println(url);
 
+    SDUtil::authenticationToken_ = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI4YmRiYWY1My1iZTUyLTRkYzUtYTVjNS0yMzVlMjBkMmQ0NDIiLCJ1c2VyUGsiOiI4YmRiYWY1My1iZTUyLTRkYzUtYTVjNS0yMzVlMjBkMmQ0NDIiLCJpYXQiOjE2Njk5ODU5ODAsImV4cCI6MTY3MjU3Nzk4MH0.FLhPj5wjBicNupGlv_BmUMaDYFcuY6kh_zuXzOrrxZk";
+
     HTTPClient httpClient;
     httpClient.begin(url);
     httpClient.setReuse(true);
@@ -50,7 +52,7 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
 
         file.close();
         httpClient.end();
-        if(status < 0) {
+        if (status < 0) {
             Serial.println("http writeToStream fail : " + String(status));
             return false;
         }

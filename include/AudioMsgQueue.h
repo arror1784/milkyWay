@@ -10,7 +10,7 @@
 
 enum class AudioMQEvents {
     UPDATE_ENABLE = 0,
-    UPDATE_PLAYLIST = 1,
+    UPDATE_PLAYLIST = 1
 };
 
 class AudioMsgData {
