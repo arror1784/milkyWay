@@ -42,7 +42,7 @@ void neoPixelTask(void *params) {
         NeoPixelMsgData *msg = neoPixelMsgQueue.recv();
         if (msg != nullptr) {
             if (msg->events == NeoPixelMQEvents::UPDATE_EFFECT) {
-                neopixel.setLightEffects(msg->list);
+                neopixel.setLightEffect(msg->lightEffect);
             }
             else if (msg->events == NeoPixelMQEvents::UPDATE_MODE) {
                 neopixel.changeMode(msg->mode);
@@ -66,7 +66,7 @@ void neoPixelTask(void *params) {
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
 
-int volume = 18;
+int volume = 10;
 
 void audioTask(void *params) {
     audioControl.setVolume(volume); // 0...21
@@ -106,7 +106,7 @@ void audioTask(void *params) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
                 tick = xTaskGetTickCount();
                 auto *dataN = new NeoPixelMsgData();
-                dataN->list = LightEffect();
+                dataN->lightEffect = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
                 auto absData = std::abs(audioControl.getLastGain()) / volume;
@@ -148,7 +148,7 @@ void shuffleTask(void *params) {
             dataA->events = AudioMQEvents::UPDATE_ENABLE;
 
             auto *dataN = new NeoPixelMsgData();
-            dataN->list = LightEffect();
+            dataN->lightEffect = LightEffect();
             dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
             dataN->mode = ELightMode::None;
 
@@ -185,7 +185,7 @@ void processUserMode(const JsonObject &data) {
     dataA->enable = false;
 
     auto *dataN = new NeoPixelMsgData();
-    dataN->list = LightEffect();
+    dataN->lightEffect = LightEffect();
     dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
     dataN->mode = ELightMode::None;
     dataN->enable = false;
@@ -221,7 +221,7 @@ void processUserMode(const JsonObject &data) {
     UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 
     auto *dataN2 = new NeoPixelMsgData();
-    dataN2->list = LightEffect();
+    dataN2->lightEffect = LightEffect();
     dataN2->events = NeoPixelMQEvents::UPDATE_MODE;
     dataN2->mode = Util::stringToELightMode(data["lightMode"]);
 
@@ -240,7 +240,7 @@ void processPlayList(const JsonObject &data) {
 void processLightEffects(const JsonArray &array) {
     for (auto jsonLightEffect: array) {
         auto *dataN = new NeoPixelMsgData();
-        dataN->list = WebSocketClient::parseLightEffect(jsonLightEffect);
+        dataN->lightEffect = WebSocketClient::parseLightEffect(jsonLightEffect);
         dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
@@ -392,7 +392,7 @@ void setup() {
                 dataA->enable = false;
 
                 auto *dataN = new NeoPixelMsgData();
-                dataN->list = LightEffect();
+                dataN->lightEffect = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_ENABLE;
                 dataN->mode = ELightMode::None;
                 dataN->enable = false;

@@ -62,9 +62,9 @@ public:
     lightEffect.id = jsonLightEffect["id"];
 
     lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
-    lightEffect.isRandomColor = jsonLightEffect["isRandomColor"];
+    lightEffect.isRandomColor = jsonLightEffect["randomColor"];
     lightEffect.speed = jsonLightEffect["speed"];
-    lightEffect.isRandomSpeed = jsonLightEffect["isRandomSpeed"];
+    lightEffect.isRandomSpeed = jsonLightEffect["randomSpeed"];
 
     for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
         ColorSet colorSet;

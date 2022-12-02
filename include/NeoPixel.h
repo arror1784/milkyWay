@@ -27,27 +27,32 @@ public:
 class Neopixel {
 public:
     Neopixel(int nLed, int pin, neoPixelType type);
+
     void begin();
-    void plotColorSet(LightEffect lightEffect,int colorSetIndex, uint8_t br);
-    void plotColorSet(LightEffect lightEffect,int colorSetIndex);
-    void colorChange(int changes, unsigned time);
-    void dim(int dims, unsigned int time);
-    void blink(int blinks, unsigned int time);
+
+    void plotColorSet(LightEffect lightEffect, int colorSetIndex, uint8_t br);
+
+    void plotColorSet(LightEffect lightEffect, int colorSetIndex);
+
+    void colorChange(int changes);
+
+    void dim(int dims);
+
+    void blink(int blinks);
 
     void sync(uint8_t per);
 
-    void setLightEffects(const LightEffect &lightEffects);
+    void setLightEffect(const LightEffect &lightEffect);
+
     void changeMode(ELightMode mode);
-    
+
     void loop();
 
-    void setEnable(bool enable){_enable = enable;};
+    void setEnable(bool enable) { _enable = enable; };
 
 private:
     Adafruit_NeoPixel _strip;
     int _pin;
-
-    int _selectColorPreset;
     int _nLed;
 
     int _mixCount = 0;
@@ -69,6 +74,9 @@ private:
 
     static const uint32_t black_ = 0x00000000;
     static const int blackColorSetIndex_ = -1;
+
+    static const std::vector<unsigned int> breathingSpeeds_;
+    static const std::vector<unsigned int> blinkingSpeeds_;
 };
 
 #endif //ESP32_LIB_NEOPIXEL_H+

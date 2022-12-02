@@ -19,7 +19,7 @@ enum class NeoPixelMQEvents{
 
 class NeoPixelMsgData{
 public:
-    LightEffect list;
+    LightEffect lightEffect;
     NeoPixelMQEvents events;
     ELightMode mode;
     bool enable = true;
