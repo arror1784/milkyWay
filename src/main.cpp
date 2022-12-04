@@ -100,9 +100,7 @@ void audioTask(void *params) {
 
         if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
-                auto gain = audioControl.getLastGain() / volume;
-
-                if (gain < 0) continue;
+                auto gain = std::abs(audioControl.getLastGain()) / volume;
 
                 tick = xTaskGetTickCount();
                 auto *dataN = new NeoPixelMsgData();
@@ -110,7 +108,7 @@ void audioTask(void *params) {
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
 
-                if (gains.size() > 50) {
+                if (gains.size() > 10) {
                     gains.erase(gains.begin());
                 }
                 gains.push_back(gain);
