@@ -282,33 +282,33 @@ WebSocketClient wsClient;
 WebServer webServer(80);
 
 bool connectWifiBySdData() {
-    String str = SDUtil::readFile(SDUtil::wifiInfoPath_);
 
-    DynamicJsonDocument doc = DynamicJsonDocument(str.length() * 2);
-    deserializeJson(doc, str);
-
-    if (doc.isNull()) {
-        Serial.println("there is no wifi info");
-        return false;
-    }
+    auto ssid = EepromControl::getInstance().getWifiSsid();
+    auto psk = EepromControl::getInstance().getWifiPsk();
 
     Serial.print("ssid : ");
-    Serial.println(String(doc["ssid"]));
+    Serial.println(ssid);
     Serial.print("password : ");
-    Serial.println(String(doc["password"]));
+    Serial.println(psk);
 
-    String status = WifiModule::getInstance().connectWifi(doc["ssid"], doc["password"]);
+    if(ssid.length() != 0){
 
-    if (status != "WL_CONNECTED") {
-        Serial.println("wifi connect fail");
+        String status = WifiModule::getInstance().connectWifi(ssid,psk);
+
+        if (status != "WL_CONNECTED") {
+            Serial.println("wifi connect fail");
+            WifiModule::getInstance().start();
+            return false;
+        }
+
+        Serial.println("wifi connect");
+        WifiModule::getInstance().stop();
+        wsClient.connect();
+        return true;
+    }else{
         WifiModule::getInstance().start();
         return false;
     }
-
-    Serial.println("wifi connect");
-    WifiModule::getInstance().stop();
-    wsClient.connect();
-    return true;
 }
 
 void receiveWifi() {
@@ -325,7 +325,40 @@ void receiveWifi() {
 
         serializeJson(doc, strPayload);
 
-        SDUtil::writeFile(SDUtil::wifiInfoPath_, strPayload);
+        EepromControl::getInstance().setWifiPsk(doc["ssid"],doc["password"]);
+        Serial.println(EepromControl::getInstance().getWifiSsid());
+        Serial.println(EepromControl::getInstance().getWifiPsk());
+        
+        bool status = connectWifiBySdData();
+
+        if (!status) {
+            webServer.send(400, "text/plain", "network connect fail");
+            return;
+        }
+        webServer.send(200);
+    }
+    else {
+        webServer.send(400, "text/plain", "wrong json data");
+    }
+}
+
+void receiveSerial(){
+
+    if (!webServer.hasArg("plain")) {
+        webServer.send(400, "text/plain", "no plainBody");
+        return;
+    }
+    String plainBody = webServer.arg("plain");
+    DynamicJsonDocument doc(plainBody.length() * 2);
+    deserializeJson(doc, plainBody);
+
+    if (doc.containsKey("serial")) {
+        String strPayload;
+
+        serializeJson(doc, strPayload);
+
+        EepromControl::getInstance().setSerial(doc["serial"]);
+        Serial.println(EepromControl::getInstance().getSerial());
 
         bool status = connectWifiBySdData();
 
@@ -346,17 +379,18 @@ AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
-    Serial.println(EepromControl::getInstance().getSerial());
-    EepromControl::getInstance().setSerial("cghcghcghghc");
-    Serial.println(EepromControl::getInstance().getSerial());
+    EepromControl::getInstance().setSerial("KIRATESTEST");
+
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
-    // Serial.println(SDUtil::getInstance().getSerial());
+    Serial.println(EepromControl::getInstance().getSerial());
+
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
-    // WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
+    WifiModule::getInstance().setApInfo(EepromControl::getInstance().getSerial());
 
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
+    webServer.on("/serial", HTTP_POST, &receiveSerial);
     webServer.begin();
 
     wsClient.setHost(host);
@@ -368,7 +402,7 @@ void setup() {
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
-        // json["name"] = SDUtil::getInstance().getSerial();
+        json["name"] = EepromControl::getInstance().getSerial();
         json["isFirstConnection"] = isFirstConnection;
         Serial.println(String(json["name"]));
         json["type"] = "Mirror";
@@ -504,7 +538,7 @@ void loop() {
         }
     }
     else {
-        // connectWifiBySdData();
+        connectWifiBySdData();
     }
 }
 

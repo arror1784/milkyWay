@@ -15,7 +15,7 @@ public:
 
   void setWifiPsk(String ssid, String passwd);
   String getWifiSsid();
-  String getWifiPwd();
+  String getWifiPsk();
 
   static const String defaultSerial_;
 

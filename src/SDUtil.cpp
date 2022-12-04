@@ -7,8 +7,6 @@
 
 String SDUtil::authenticationToken_;
 
-const String SDUtil::wifiInfoPath_ = "/WIFI.json";
-const String SDUtil::serialPath_ = "/SERIAL";
 const String SDUtil::defaultColorSetsPath_ = "/lightEffect.json";
 
 void SDUtil::init() {

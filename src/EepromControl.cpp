@@ -73,7 +73,7 @@ String EepromControl::getWifiSsid(){
     return String(temp);
 }
 
-String EepromControl::getWifiPwd(){
+String EepromControl::getWifiPsk(){
     if(!_isWifiSet)
         return "";
     

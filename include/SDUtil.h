@@ -18,8 +18,6 @@ public:
 
   static String authenticationToken_;
 
-  static const String wifiInfoPath_;
-  static const String serialPath_;
   static const String defaultColorSetsPath_;
 
 private:
