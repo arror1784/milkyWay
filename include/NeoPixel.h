@@ -3,11 +3,13 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
-#include <vector>
-#include <map>
 
 #include "Util.h"
 #include "SDUtil.h"
+
+enum class EBreathingStatus {
+    UP, DOWN
+};
 
 class ColorSet {
 public:
@@ -17,7 +19,7 @@ public:
 
 class LightEffect {
 public:
-    long id = 0;
+    long id;
     std::vector<ColorSet> colorSets;
     ELightMode mode = ELightMode::Blinking;
     bool isRandomColor;
@@ -25,65 +27,41 @@ public:
     bool isRandomSpeed;
 };
 
-class Neopixel {
+class NeoPixel {
 public:
-    Neopixel(int nLed, int pin, neoPixelType type);
+    NeoPixel(uint16_t nLed, int16_t pin, neoPixelType type);
 
-    void begin();
+    void on(uint8_t brightness = 255);
 
-    void plotColorSet(const LightEffect &lightEffect, int colorSetIndex, uint8_t br);
+    void off();
 
-    void plotColorSet(const LightEffect &lightEffect, int colorSetIndex);
+    void lowerBrightness();
 
-    void colorChange(int changes);
+    void increaseBrightness();
 
-    void dim(int dims);
+    bool isOn() const;
 
-    void blink(int blinks);
+    EBreathingStatus getBreathingStatus() const;
 
-    void sync(uint8_t per);
+    uint8_t getMaxBrightness() const;
 
-    void setLightEffect(const LightEffect &lightEffect);
+    uint8_t getBrightness() const;
 
-    void changeMode(ELightMode mode);
+    void setColorSet(const ColorSet &colorSet);
 
-    void loop();
-
-    void setEnable(bool enable) { _enable = enable; };
-
-    const LightEffect &getLightEffect(ELightMode mode);
+    void setBreathingStatus(EBreathingStatus status);
 
 private:
+    void updatePixelColor();
+
+    EBreathingStatus _breathingStatus = EBreathingStatus::UP;
+
+    ColorSet _colorSet;
     Adafruit_NeoPixel _strip;
-    int _pin;
-    int _nLed;
 
-    int _mixCount = 0;
-    int _mixMode = 0;
-    const int _MaxMixCount = 4;
-    int _colorPresetIndex = 0;
-
-    LightEffect _breathingLightEffect;
-    LightEffect _blinkingLightEffect;
-    LightEffect _colorChangeLightEffect;
-
-    LightEffect _defaultBreathingLightEffect;
-    LightEffect _defaultBlinkingLightEffect;
-    LightEffect _defaultColorChangeLightEffect;
-
-    ELightMode _mode = ELightMode::None;
-    bool _enable = false;
-
-    int _colorSetId = 0;
-
-    const int _delayPartition = 255;
-    const int _maxBright = 255;
-
-    static const uint32_t black_ = 0x00000000;
-    static const int blackColorSetIndex_ = -1;
-
-    static const std::vector<unsigned int> breathingSpeeds_;
-    static const std::vector<unsigned int> blinkingSpeeds_;
+    int16_t pin_ = 32;
+    int ledCount_ = 24;
+    const uint8_t maxBright_ = 255;
 };
 
-#endif //ESP32_LIB_NEOPIXEL_H+
+#endif //ESP32_LIB_NEOPIXEL_H

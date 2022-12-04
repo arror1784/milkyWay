@@ -12,86 +12,86 @@
 #include <functional>
 #include <optional>
 
-class WebSocketClient{
+class WebSocketClient {
 public:
-  WebSocketClient();
+    WebSocketClient();
 
-  void connect();
+    void connect();
 
-  void loop();
+    void loop();
 
-  bool isConnected();
+    bool isConnected();
 
-  void setHost(const String &host);
+    void setHost(const String &host);
 
-  void setPort(int port);
+    void setPort(int port);
 
-  void setWithSsl(bool withSsl);
+    void setWithSsl(bool withSsl);
 
-  void sendText(String txt);
-  
-  typedef std::function<void(uint8_t *, size_t)> webSocketReceiveCB;
+    void sendText(String txt);
 
-  void onTextMessageReceived(webSocketReceiveCB cb){_webSockectReceiveText = cb;};
+    typedef std::function<void(uint8_t *, size_t)> webSocketReceiveCB;
 
-  void onBinaryMessageReceived(webSocketReceiveCB cb){_webSockectReceiveBinary = cb;};
+    void onTextMessageReceived(webSocketReceiveCB cb) { _webSockectReceiveText = cb; };
 
-  void onConnected(webSocketReceiveCB cb){_webSockectReceiveConnected = cb;};
+    void onBinaryMessageReceived(webSocketReceiveCB cb) { _webSockectReceiveBinary = cb; };
 
-  void onDisconnected(webSocketReceiveCB cb){_webSockectReceiveDisconnected = cb;};
+    void onConnected(webSocketReceiveCB cb) { _webSockectReceiveConnected = cb; };
 
-  void onErrorReceived(webSocketReceiveCB cb){_webSockectReceiveError = cb;};
+    void onDisconnected(webSocketReceiveCB cb) { _webSockectReceiveDisconnected = cb; };
 
-  static Playlist parsePlayList(const JsonObject& data) {
-    Playlist playlist;
-    playlist.id = data["id"];
-    playlist.isShuffle = data["isShuffle"];
-    playlist.sounds.clear();
-    for (auto jsonSound: JsonArray(data["sounds"])) {
-      Sound sound;
-      sound.filename = String(jsonSound["filename"]);
-      sound.id = jsonSound["id"];
+    void onErrorReceived(webSocketReceiveCB cb) { _webSockectReceiveError = cb; };
 
-      playlist.sounds.push_back(sound);
-    }
-    return playlist;
-  }
+    static Playlist parsePlayList(const JsonObject &data) {
+        Playlist playlist;
+        playlist.id = data["id"];
+        playlist.isShuffle = data["isShuffle"];
+        playlist.sounds.clear();
+        for (auto jsonSound: JsonArray(data["sounds"])) {
+            Sound sound;
+            sound.filename = String(jsonSound["filename"]);
+            sound.id = jsonSound["id"];
 
-  static LightEffect parseLightEffect(const JsonObject& jsonLightEffect) {
-    LightEffect lightEffect;
-
-    lightEffect.id = jsonLightEffect["id"];
-    lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
-    lightEffect.isRandomColor = jsonLightEffect["randomColor"];
-    lightEffect.speed = jsonLightEffect["speed"];
-    lightEffect.isRandomSpeed = jsonLightEffect["randomSpeed"];
-
-    for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
-        ColorSet colorSet;
-
-        colorSet.id = jsonColorSet["id"];
-
-        for (String color: JsonArray(jsonColorSet["colors"])) {
-            colorSet.colors.push_back(Util::stringToRGBW(color));
+            playlist.sounds.push_back(sound);
         }
-        lightEffect.colorSets.push_back(colorSet);
+        return playlist;
     }
 
-    return lightEffect;
-  }
+    static LightEffect parseLightEffect(const JsonObject &jsonLightEffect) {
+        LightEffect lightEffect;
+
+        lightEffect.id = jsonLightEffect["id"];
+        lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
+        lightEffect.isRandomColor = jsonLightEffect["randomColor"];
+        lightEffect.speed = jsonLightEffect["speed"];
+        lightEffect.isRandomSpeed = jsonLightEffect["randomSpeed"];
+
+        for (JsonObject jsonColorSet: JsonArray(jsonLightEffect["colors"])) {
+            ColorSet colorSet;
+
+            colorSet.id = jsonColorSet["id"];
+
+            for (String color: JsonArray(jsonColorSet["colors"])) {
+                colorSet.colors.push_back(Util::stringToRGBW(color));
+            }
+            lightEffect.colorSets.push_back(colorSet);
+        }
+
+        return lightEffect;
+    }
 
 private:
-  String _host = "0.0.0.0";
-  int _port = 80;
-  bool _withSSL = false;
+    String _host = "0.0.0.0";
+    int _port = 80;
+    bool _withSSL = false;
 
-  WebSocketsClient _client;
+    WebSocketsClient _client;
 
-  std::optional<webSocketReceiveCB> _webSockectReceiveText;
-  std::optional<webSocketReceiveCB> _webSockectReceiveBinary;
-  std::optional<webSocketReceiveCB> _webSockectReceiveConnected;
-  std::optional<webSocketReceiveCB> _webSockectReceiveDisconnected;
-  std::optional<webSocketReceiveCB> _webSockectReceiveError;
+    std::optional<webSocketReceiveCB> _webSockectReceiveText;
+    std::optional<webSocketReceiveCB> _webSockectReceiveBinary;
+    std::optional<webSocketReceiveCB> _webSockectReceiveConnected;
+    std::optional<webSocketReceiveCB> _webSockectReceiveDisconnected;
+    std::optional<webSocketReceiveCB> _webSockectReceiveError;
 
 };
 

@@ -1,7 +1,3 @@
-//
-// Created by jepanglee on 2022-11-26.
-//
-
 #ifndef MILKYWAY_SHUFFLEMSGQUEUE_H
 #define MILKYWAY_SHUFFLEMSGQUEUE_H
 
@@ -9,21 +5,22 @@
 
 #include "Util.h"
 
-enum class ShuffleSMQEvents{
-  UPDATE_ENABLE = 2
+enum class EShuffleSMQEvent {
+    FINISH_SOUND,
+    FINISH_NEO_PIXEL,
+    UPDATE_ENABLE
 };
 
-class ShuffleMsgData{
+class ShuffleMsgData {
 public:
-    ShuffleSMQEvents events;
+    EShuffleSMQEvent events;
     bool enable = true;
 };
 
 class ShuffleMsgQueue : public MsgQueue<ShuffleMsgData> {
 public:
-    ShuffleMsgQueue(int length) : MsgQueue(length, sizeof(NeoPixelMsgData*)) {
+    ShuffleMsgQueue(int length) : MsgQueue(length, sizeof(ShuffleMsgData *)) {
     }
 };
-
 
 #endif //MILKYWAY_SHUFFLEMSGQUEUE_H

@@ -10,7 +10,7 @@
 #include <IPAddress.h>
 
 enum class ELightMode {
-  Breathing = 0, Blinking = 1, ColorChange = 3, Mixed, Sync, None
+  Breathing, Blinking, ColorChange, Mixed, None
 };
 
 enum class EDeviceType {

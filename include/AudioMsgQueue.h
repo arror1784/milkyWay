@@ -1,14 +1,10 @@
-//
-// Created by jepanglee on 2022-11-26.
-//
-
 #ifndef MILKYWAY_AUDIOMSGQUEUE_H
 #define MILKYWAY_AUDIOMSGQUEUE_H
 
 #include "MsgQueue.h"
 #include "AudioControl.h"
 
-enum class AudioMQEvents {
+enum class EAudioMQEvent {
     UPDATE_ENABLE = 0,
     UPDATE_PLAYLIST = 1
 };
@@ -16,8 +12,9 @@ enum class AudioMQEvents {
 class AudioMsgData {
 public:
     Playlist list;
-    AudioMQEvents events;
+    EAudioMQEvent events;
     bool enable = true;
+    bool isShuffle = false;
 };
 
 class AudioMsgQueue : public MsgQueue<AudioMsgData> {
