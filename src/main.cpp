@@ -80,9 +80,6 @@ void audioTask(void *params) {
 
             continue;
         }
-
-        audioControl.loop();
-
         if (msg != nullptr) {
             if (msg->events == AudioMQEvents::UPDATE_PLAYLIST) {
                 Serial.println("updatePLAYLIST");
@@ -90,17 +87,15 @@ void audioTask(void *params) {
                 audioControl.setPlayList(list);
             }
             else if (msg->events == AudioMQEvents::UPDATE_ENABLE) {
-//                Serial.println(String("msg->enable : ") + msg->enable);
-                if (!audioControl.isDownloading()) {
-                    if (msg->enable)
-                        audioControl.resume();
-                    else
-                        audioControl.pause();
-                }
+                if (msg->enable)
+                    audioControl.resume();
+                else
+                    audioControl.pause();
             }
 
             delete msg;
         }
+        audioControl.loop();
 
         if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
@@ -176,8 +171,6 @@ void shuffleTask(void *params) {
     vTaskDelete(nullptr);
 }
 
-AudioDownloadMsgQueue audioDownloadMsgQueue(5);
-
 void processUserMode(const JsonObject &data) {
     auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
@@ -238,9 +231,46 @@ void processPlayList(const JsonObject &data) {
 }
 
 void processLightEffects(const JsonArray &array) {
+    bool isBlinkingExists = false;
+    bool isBreathingExists = false;
+    bool isColorChangeExists = false;
+
     for (auto jsonLightEffect: array) {
         auto *dataN = new NeoPixelMsgData();
+
         dataN->lightEffect = WebSocketClient::parseLightEffect(jsonLightEffect);
+        dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+        dataN->mode = ELightMode::None;
+
+        neoPixelMsgQueue.send(dataN);
+
+        if (dataN->mode == ELightMode::Blinking) isBlinkingExists = true;
+        else if (dataN->mode == ELightMode::Breathing) isBreathingExists = true;
+        else if (dataN->mode == ELightMode::ColorChange) isColorChangeExists = true;
+    }
+
+    if (isBlinkingExists) {
+        auto *dataN = new NeoPixelMsgData();
+
+        dataN->lightEffect.mode = ELightMode::Blinking;
+        dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+        dataN->mode = ELightMode::None;
+
+        neoPixelMsgQueue.send(dataN);
+    }
+    if (isBreathingExists) {
+        auto *dataN = new NeoPixelMsgData();
+
+        dataN->lightEffect.mode = ELightMode::Breathing;
+        dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
+        dataN->mode = ELightMode::None;
+
+        neoPixelMsgQueue.send(dataN);
+    }
+    if (isColorChangeExists) {
+        auto *dataN = new NeoPixelMsgData();
+
+        dataN->lightEffect.mode = ELightMode::ColorChange;
         dataN->events = NeoPixelMQEvents::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
@@ -311,6 +341,7 @@ void receiveWifi() {
 }
 
 bool isFirstConnection = true;
+AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 
 void setup() {
     Serial.begin(115200);
@@ -423,8 +454,6 @@ void setup() {
                     }
                 }
 
-
-                Serial.println(String("SendHumanDetection dataA->enable : ") + dataA->enable);
                 audioMsgQueue.send(dataA);
                 neoPixelMsgQueue.send(dataN);
                 shuffleMsgQueue.send(dataS);
@@ -448,8 +477,8 @@ void loop() {
 
     // TODO: 큐를 임베디드 기기가 아닌 서버에서 구현하고, 이를 패치해 오는 방식을 바꾸는 것도 고려
 
-    AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
     if (WifiModule::getInstance().isConnectedST()) {
+        AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
         if (msg != nullptr) {
             audioControl.setIsDownloading(true);
 

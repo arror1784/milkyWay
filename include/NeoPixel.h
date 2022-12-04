@@ -7,6 +7,7 @@
 #include <map>
 
 #include "Util.h"
+#include "SDUtil.h"
 
 class ColorSet {
 public:
@@ -16,7 +17,7 @@ public:
 
 class LightEffect {
 public:
-    long id;
+    long id = 0;
     std::vector<ColorSet> colorSets;
     ELightMode mode = ELightMode::Blinking;
     bool isRandomColor;
@@ -30,9 +31,9 @@ public:
 
     void begin();
 
-    void plotColorSet(LightEffect lightEffect, int colorSetIndex, uint8_t br);
+    void plotColorSet(const LightEffect &lightEffect, int colorSetIndex, uint8_t br);
 
-    void plotColorSet(LightEffect lightEffect, int colorSetIndex);
+    void plotColorSet(const LightEffect &lightEffect, int colorSetIndex);
 
     void colorChange(int changes);
 
@@ -63,6 +64,10 @@ private:
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;
     LightEffect _colorChangeLightEffect;
+
+    LightEffect _defaultBreathingLightEffect;
+    LightEffect _defaultBlinkingLightEffect;
+    LightEffect _defaultColorChangeLightEffect;
 
     ELightMode _mode = ELightMode::None;
     bool _enable = false;

@@ -9,7 +9,48 @@ const std::vector<unsigned int>  Neopixel::blinkingSpeeds_{
 };
 
 Neopixel::Neopixel(int nLed, int pin, neoPixelType type) : _nLed(nLed), _pin(pin), _strip(nLed, pin, type) {
+    _defaultBreathingLightEffect = {
+        .id = 0,
+        .colorSets{},
+        .mode = ELightMode::Breathing,
+        .isRandomColor = true,
+        .speed = 5500,
+        .isRandomSpeed = true
+    };
 
+    _defaultBlinkingLightEffect = {
+        .id = 0,
+        .colorSets{},
+        .mode = ELightMode::Blinking,
+        .isRandomColor = true,
+        .speed = 5500,
+        .isRandomSpeed = true
+    };
+
+    _defaultColorChangeLightEffect = {
+        .id = 0,
+        .colorSets{},
+        .mode = ELightMode::ColorChange,
+        .isRandomColor = true,
+        .speed = 5500,
+        .isRandomSpeed = true
+    };
+
+    String fileStr = SDUtil::readFile(SDUtil::defaultColorSetsPath_);
+
+    DynamicJsonDocument doc = DynamicJsonDocument(fileStr.length() * 2);
+    deserializeJson(doc, fileStr);
+
+    for (auto jsonColorSet: JsonArray(doc["colors"])) {
+        ColorSet colorSet;
+        for (auto jsonColor: JsonArray(jsonColorSet["colors"])) {
+            colorSet.colors.push_back(Util::stringToRGBW(String(jsonColor)));
+        }
+
+        _defaultBreathingLightEffect.colorSets.push_back(colorSet);
+        _defaultBlinkingLightEffect.colorSets.push_back(colorSet);
+        _defaultColorChangeLightEffect.colorSets.push_back(colorSet);
+    }
 }
 
 void Neopixel::begin() {
@@ -17,7 +58,7 @@ void Neopixel::begin() {
     _strip.show();
 }
 
-void Neopixel::plotColorSet(LightEffect lightEffect, int colorSetIndex, uint8_t br) {
+void Neopixel::plotColorSet(const LightEffect &lightEffect, int colorSetIndex, uint8_t br) {
 
     uint32_t c;
     uint8_t r, g, b;
@@ -46,6 +87,10 @@ void Neopixel::plotColorSet(LightEffect lightEffect, int colorSetIndex, uint8_t 
     _strip.show();
 }
 
+void Neopixel::plotColorSet(const LightEffect &lightEffect, int colorSetIndex) {
+    plotColorSet(lightEffect, colorSetIndex, _maxBright);
+}
+
 void Neopixel::sync(uint8_t per) {
     uint32_t c;
     uint8_t r, g, b;
@@ -63,12 +108,13 @@ void Neopixel::sync(uint8_t per) {
     _strip.show();
 }
 
-void Neopixel::plotColorSet(LightEffect lightEffect, int colorSetIndex) {
-    plotColorSet(lightEffect, colorSetIndex, _maxBright);
-}
-
 void Neopixel::colorChange(int changes) {
-    unsigned int time = _colorChangeLightEffect.speed;
+    const LightEffect &lightEffect =
+        _colorChangeLightEffect.id == 0
+        ? _defaultColorChangeLightEffect
+        : _colorChangeLightEffect;
+
+    unsigned int time = lightEffect.speed;
 
     int prevcolorSetIndex = -1;
     int currentcolorSetIndex;
@@ -76,18 +122,18 @@ void Neopixel::colorChange(int changes) {
     for (int i = 0; i < changes; i++) {
 
         while (1) {
-            currentcolorSetIndex = random(_colorChangeLightEffect.colorSets.size());
+            currentcolorSetIndex = random(lightEffect.colorSets.size());
             if (prevcolorSetIndex != currentcolorSetIndex)
                 break;
 
         }
         for (int j = 0; j < _delayPartition / 2; j++) {
-            plotColorSet(_colorChangeLightEffect, currentcolorSetIndex, _maxBright * j * 2 / _delayPartition);
+            plotColorSet(lightEffect, currentcolorSetIndex, _maxBright * j * 2 / _delayPartition);
             Util::taskDelay(time / _delayPartition);
         }
 
         for (int j = _delayPartition / 2; j < _delayPartition; j++) {
-            plotColorSet(_colorChangeLightEffect, currentcolorSetIndex,
+            plotColorSet(lightEffect, currentcolorSetIndex,
                          _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
             Util::taskDelay(time / _delayPartition);
         }
@@ -97,19 +143,24 @@ void Neopixel::colorChange(int changes) {
 }
 
 void Neopixel::dim(int dims) {
-    unsigned int time = _breathingLightEffect.isRandomSpeed
-                        ? breathingSpeeds_[random(breathingSpeeds_.size())]
-                        : _breathingLightEffect.speed;
+    const LightEffect &lightEffect =
+        _breathingLightEffect.id == 0
+        ? _defaultBreathingLightEffect : _breathingLightEffect;
+
+    unsigned int time =
+        lightEffect.isRandomSpeed
+        ? breathingSpeeds_[random(breathingSpeeds_.size())]
+        : lightEffect.speed;
 
     for (int i = 0; i < dims; i++) {
 
         for (int j = 0; j < _delayPartition / 2; j++) {
-            plotColorSet(_breathingLightEffect, _colorPresetIndex, _maxBright * j * 2 / _delayPartition);
+            plotColorSet(lightEffect, _colorPresetIndex, _maxBright * j * 2 / _delayPartition);
             Util::taskDelay(time / _delayPartition);
         }
 
         for (int j = _delayPartition / 2; j < _delayPartition; j++) {
-            plotColorSet(_breathingLightEffect, _colorPresetIndex,
+            plotColorSet(lightEffect, _colorPresetIndex,
                          _maxBright * (_delayPartition - j - 1) * 2 / _delayPartition);
             Util::taskDelay(time / _delayPartition);
         }
@@ -117,15 +168,21 @@ void Neopixel::dim(int dims) {
 }
 
 void Neopixel::blink(int blinks) {
-    unsigned int time = _blinkingLightEffect.isRandomSpeed
-                        ? blinkingSpeeds_[random(blinkingSpeeds_.size())]
-                        : _blinkingLightEffect.speed;
+    const LightEffect &lightEffect =
+        _blinkingLightEffect.id == 0
+        ? _defaultBlinkingLightEffect : _blinkingLightEffect;
+
+    unsigned int time =
+        lightEffect.isRandomSpeed
+        ? blinkingSpeeds_[random(blinkingSpeeds_.size())]
+        : lightEffect.speed;
+
 
     for (int i = 0; i < blinks; i++) {
-        plotColorSet(_blinkingLightEffect, _colorPresetIndex);
+        plotColorSet(lightEffect, _colorPresetIndex);
         Util::taskDelay(time);
 
-        plotColorSet(_blinkingLightEffect, -1, 0);
+        plotColorSet(lightEffect, -1, 0);
         Util::taskDelay(time);
     }
 }

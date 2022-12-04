@@ -56,11 +56,11 @@ public:
     }
     return playlist;
   }
+
   static LightEffect parseLightEffect(const JsonObject& jsonLightEffect) {
     LightEffect lightEffect;
 
     lightEffect.id = jsonLightEffect["id"];
-
     lightEffect.mode = Util::stringToELightMode(jsonLightEffect["mode"]);
     lightEffect.isRandomColor = jsonLightEffect["randomColor"];
     lightEffect.speed = jsonLightEffect["speed"];

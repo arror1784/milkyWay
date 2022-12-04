@@ -9,6 +9,7 @@ String SDUtil::authenticationToken_;
 
 const String SDUtil::wifiInfoPath_ = "/WIFI.json";
 const String SDUtil::serialPath_ = "/SERIAL";
+const String SDUtil::defaultColorSetsPath_ = "/lightEffect.json";
 
 void SDUtil::init() {
     bool sdStatus = SD.begin(5);
@@ -33,8 +34,6 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
 
     Serial.println(url);
 
-    SDUtil::authenticationToken_ = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI4YmRiYWY1My1iZTUyLTRkYzUtYTVjNS0yMzVlMjBkMmQ0NDIiLCJ1c2VyUGsiOiI4YmRiYWY1My1iZTUyLTRkYzUtYTVjNS0yMzVlMjBkMmQ0NDIiLCJpYXQiOjE2Njk5ODU5ODAsImV4cCI6MTY3MjU3Nzk4MH0.FLhPj5wjBicNupGlv_BmUMaDYFcuY6kh_zuXzOrrxZk";
-
     HTTPClient httpClient;
     httpClient.begin(url);
     httpClient.setReuse(true);
@@ -43,10 +42,6 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     int httpCode = httpClient.GET();
     if (httpCode == HTTP_CODE_OK) {
         File file = SD.open(("/" + filename).c_str(), FILE_WRITE);
-
-//        if(file.size() > 0) {
-//            file.flush();
-//        }
 
         int status = httpClient.writeToStream(&file);
 
