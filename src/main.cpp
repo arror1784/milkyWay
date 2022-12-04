@@ -459,6 +459,9 @@ void setup() {
                 shuffleMsgQueue.send(dataS);
             }
         }
+        else if (doc["event"] == "Ping") {
+            wsClient.sendText(R"({"event": "Pong"})");
+        }
     });
     wsClient.onErrorReceived([&](uint8_t *payload, size_t length) {
         Serial.println(String(payload, length));
