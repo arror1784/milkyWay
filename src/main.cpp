@@ -281,7 +281,7 @@ void processLightEffects(const JsonArray &array) {
 WebSocketClient wsClient;
 WebServer webServer(80);
 
-bool connectWifiBySdData() {
+bool connectWifi() {
 
     auto ssid = EepromControl::getInstance().getWifiSsid();
     auto psk = EepromControl::getInstance().getWifiPsk();
@@ -326,10 +326,11 @@ void receiveWifi() {
         serializeJson(doc, strPayload);
 
         EepromControl::getInstance().setWifiPsk(doc["ssid"],doc["password"]);
+
         Serial.println(EepromControl::getInstance().getWifiSsid());
         Serial.println(EepromControl::getInstance().getWifiPsk());
         
-        bool status = connectWifiBySdData();
+        bool status = connectWifi();
 
         if (!status) {
             webServer.send(400, "text/plain", "network connect fail");
@@ -358,14 +359,8 @@ void receiveSerial(){
         serializeJson(doc, strPayload);
 
         EepromControl::getInstance().setSerial(doc["serial"]);
-        Serial.println(EepromControl::getInstance().getSerial());
+        Serial.println("get serial : " + EepromControl::getInstance().getSerial());
 
-        bool status = connectWifiBySdData();
-
-        if (!status) {
-            webServer.send(400, "text/plain", "network connect fail");
-            return;
-        }
         webServer.send(200);
     }
     else {
@@ -379,12 +374,12 @@ AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
-    EepromControl::getInstance().setSerial("KIRATESTEST");
-
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
-    Serial.println(EepromControl::getInstance().getSerial());
+    Serial.println("SERIAL : " + EepromControl::getInstance().getSerial());
+    Serial.println("SSID : " + EepromControl::getInstance().getWifiSsid());
+    Serial.println("PSK : " + EepromControl::getInstance().getWifiPsk());
 
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
     WifiModule::getInstance().setApInfo(EepromControl::getInstance().getSerial());
@@ -506,7 +501,7 @@ void setup() {
     xTaskCreatePinnedToCore(neoPixelTask, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore(shuffleTask, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore(audioTask, "audioTask", 10000, nullptr, 1, nullptr, 1);
-    connectWifiBySdData();
+    connectWifi();
 }
 
 void loop() {
@@ -538,7 +533,7 @@ void loop() {
         }
     }
     else {
-        connectWifiBySdData();
+        connectWifi();
     }
 }
 

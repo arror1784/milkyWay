@@ -22,15 +22,14 @@ void WifiModule::stop() {
 
 String WifiModule::connectWifi(const String &ssid, const String &password) {
     WiFi.begin(ssid.c_str(), password.c_str());
-    for (int j = 0; j < 1; j++) {
-        Serial.println("try connect");
-        for (int i = 0; i < 5; i++) {
-            if (WiFiClass::status() == WL_CONNECTED) {
-                break;
-            }
-            Serial.println("Connecting to WiFi.." + String(i));
-            delay(1000);
+    
+    Serial.println("try connect");
+    for (int i = 0; i < 5; i++) {
+        if (WiFiClass::status() == WL_CONNECTED) {
+            break;
         }
+        Serial.println("Connecting to WiFi.." + String(i));
+        delay(1000);
     }
 
     switch (WiFiClass::status()) {

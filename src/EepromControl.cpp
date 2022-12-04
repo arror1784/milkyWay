@@ -58,6 +58,9 @@ void EepromControl::setWifiPsk(String ssid, String passwd){
     char passwdTemp[20] = {0};
     strncpy(passwdTemp,passwd.c_str(),passwd.length());
 
+    EEPROM.writeBytes(EepromControl::wifiPasswdAddress_,passwdTemp,20);
+    EEPROM.commit();
+
     EEPROM.writeByte(EepromControl::wifiFlagAddress_,EepromControl::flagValue_);
     EEPROM.commit();
     
@@ -78,7 +81,7 @@ String EepromControl::getWifiPsk(){
         return "";
     
     char temp[20] = {0};
-    EEPROM.readBytes(EepromControl::wifiSsidAddress_, temp, 20);
+    EEPROM.readBytes(EepromControl::wifiPasswdAddress_, temp, 20);
     return String(temp);
 }
 
