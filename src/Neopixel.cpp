@@ -92,27 +92,13 @@ void Neopixel::plotColorSet(const LightEffect &lightEffect, int colorSetIndex) {
 }
 
 void Neopixel::sync(uint8_t per) {
-    uint32_t c;
-    uint8_t r, g, b;
+    const LightEffect &lightEffect = getLightEffect(_mode);
 
-    for (int i = 0; i < _nLed; i++) {
-        c = 0x00FFFFFF;
-        r = (c & 0x00FF0000) >> 16;
-        g = (c & 0x0000FF00) >> 8;
-        b = (c & 0x000000FF);
-        c = (r * per / _maxBright) << 16 |
-            (g * per / _maxBright) << 8 |
-            (b * per / _maxBright);
-        _strip.setPixelColor(i, c);
-    }
-    _strip.show();
+    plotColorSet(lightEffect, _colorPresetIndex, per);
 }
 
 void Neopixel::colorChange(int changes) {
-    const LightEffect &lightEffect =
-        _colorChangeLightEffect.id == 0
-        ? _defaultColorChangeLightEffect
-        : _colorChangeLightEffect;
+    const LightEffect &lightEffect = getLightEffect(ELightMode::ColorChange);
 
     unsigned int time = lightEffect.speed;
 
@@ -143,9 +129,7 @@ void Neopixel::colorChange(int changes) {
 }
 
 void Neopixel::dim(int dims) {
-    const LightEffect &lightEffect =
-        _breathingLightEffect.id == 0
-        ? _defaultBreathingLightEffect : _breathingLightEffect;
+    const LightEffect &lightEffect = getLightEffect(ELightMode::Breathing);
 
     unsigned int time =
         lightEffect.isRandomSpeed
@@ -168,9 +152,7 @@ void Neopixel::dim(int dims) {
 }
 
 void Neopixel::blink(int blinks) {
-    const LightEffect &lightEffect =
-        _blinkingLightEffect.id == 0
-        ? _defaultBlinkingLightEffect : _blinkingLightEffect;
+    const LightEffect &lightEffect = getLightEffect(ELightMode::Blinking);
 
     unsigned int time =
         lightEffect.isRandomSpeed
@@ -227,8 +209,6 @@ void Neopixel::loop() {
             if (_mixMode == 1) dim(1);
             if (_mixMode == 2) colorChange(1);
             return;
-        case ELightMode::Sync :
-            return;
         default:
             return;
     }
@@ -238,4 +218,26 @@ void Neopixel::changeMode(ELightMode mode) {
     _mode = mode;
     if (mode == ELightMode::Breathing) _colorPresetIndex = random(_breathingLightEffect.colorSets.size());
     if (mode == ELightMode::Blinking) _colorPresetIndex = random(_breathingLightEffect.colorSets.size());
+}
+
+const LightEffect &Neopixel::getLightEffect(ELightMode mode) {
+    if (_mode == ELightMode::Breathing) {
+        return _breathingLightEffect.id == 0
+               ? _defaultBreathingLightEffect : _breathingLightEffect;
+    }
+    else if (_mode == ELightMode::Blinking) {
+        return _blinkingLightEffect.id == 0
+               ? _defaultBlinkingLightEffect : _blinkingLightEffect;
+    }
+    else if (_mode == ELightMode::ColorChange) {
+        return _colorChangeLightEffect.id == 0
+               ? _defaultColorChangeLightEffect
+               : _colorChangeLightEffect;
+    }
+
+    auto randomValue = random(3);
+
+    if (randomValue == 0) return getLightEffect(ELightMode::Breathing);
+    if (randomValue == 1) return getLightEffect(ELightMode::Blinking);
+    return getLightEffect(ELightMode::ColorChange);
 }

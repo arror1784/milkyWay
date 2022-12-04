@@ -51,6 +51,8 @@ public:
 
     void setEnable(bool enable) { _enable = enable; };
 
+    const LightEffect &getLightEffect(ELightMode mode);
+
 private:
     Adafruit_NeoPixel _strip;
     int _pin;
