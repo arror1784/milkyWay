@@ -24,7 +24,7 @@
 
 #define SUFFLE_TIMEOUT 5500
 
-static const String host = "192.168.0.195";
+static const String host = "192.168.219.102";
 static const int port = 6001;
 static const bool ssl = false;
 
@@ -67,6 +67,7 @@ AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 AudioMsgQueue audioMsgQueue(5);
 
 int volume = 10;
+std::vector<int> gains;
 
 void audioTask(void *params) {
     audioControl.setVolume(volume); // 0...21
@@ -99,13 +100,28 @@ void audioTask(void *params) {
 
         if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
             if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
+                auto gain = audioControl.getLastGain() / volume;
+
+                if (gain < 0) continue;
+
                 tick = xTaskGetTickCount();
                 auto *dataN = new NeoPixelMsgData();
                 dataN->lightEffect = LightEffect();
                 dataN->events = NeoPixelMQEvents::UPDATE_SYNC;
                 dataN->mode = ELightMode::None;
-                auto absData = std::abs(audioControl.getLastGain()) / volume;
-                dataN->sync = absData;
+
+                if (gains.size() > 50) {
+                    gains.erase(gains.begin());
+                }
+                gains.push_back(gain);
+
+                int total = 0;
+                for (auto savedGain: gains) {
+                    total += savedGain;
+                }
+
+                dataN->sync = total / gains.size();
+
                 neoPixelMsgQueue.send(dataN);
             }
         }
@@ -380,10 +396,15 @@ void setup() {
         Serial.println("websocket disconnected");
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
-        Serial.println(String(payload, length));
-
         DynamicJsonDocument doc(length * 2);
-        Serial.print(deserializeJson(doc, payload, length).c_str());
+        deserializeJson(doc, payload, length);
+
+        if (doc["event"] != "Ping") {
+            String strJson;
+            serializeJson(doc, strJson);
+
+            Serial.println(strJson);
+        }
 
         if (doc.containsKey("authenticationToken")) {
             SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
@@ -460,7 +481,13 @@ void setup() {
             }
         }
         else if (doc["event"] == "Ping") {
-            wsClient.sendText(R"({"event": "Pong"})");
+            DynamicJsonDocument json(512);
+            json["event"] = "Pong";
+
+            String strJson;
+            serializeJson(json, strJson);
+
+            wsClient.sendText(strJson);
         }
     });
     wsClient.onErrorReceived([&](uint8_t *payload, size_t length) {
