@@ -4,17 +4,17 @@
 #include <WString.h>
 
 #include "Singleton.h"
+#include <FS.h>
 class SDUtil : public Singleton<SDUtil>{
 
 public:
   void init();
 
-  String getSerial();
-
   static bool downloadFile(const String &api, int id, const String &filename);
   static bool writeFile(const String &path,const String &data);
   static String readFile(const String &path);
   static bool  exists(const String &path);
+  static void listDir(FS &fs, const char *dirname, uint8_t levels);
 
   static String authenticationToken_;
 

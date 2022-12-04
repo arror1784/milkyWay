@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <FFat.h>
 #include <sstream>
+#include <WString.h>
 
 #include "WebSocketClient.h"
 #include "WifiModule.h"
@@ -14,6 +15,8 @@
 #include "AudioDownloadMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "ShuffleMsgQueue.h"
+
+#include "EepromControl.h"
 
 #define LED_PIN 32
 #define LED_LENGTH 24
@@ -28,9 +31,6 @@ static const String host = "192.168.0.195";
 static const int port = 6001;
 static const bool ssl = false;
 
-//static const String host = "kira-api.wimcorp.dev";
-//static const int port = 443;
-//static const bool ssl = true;
 static const int syncUpdateResolution = 10;
 
 NeoPixelMsgQueue neoPixelMsgQueue(5);
@@ -345,12 +345,16 @@ AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 
 void setup() {
     Serial.begin(115200);
+    EepromControl::getInstance().init();
+    Serial.println(EepromControl::getInstance().getSerial());
+    EepromControl::getInstance().setSerial("cghcghcghghc");
+    Serial.println(EepromControl::getInstance().getSerial());
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
-    Serial.println(SDUtil::getInstance().getSerial());
+    // Serial.println(SDUtil::getInstance().getSerial());
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
-    WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
+    // WifiModule::getInstance().setApInfo(SDUtil::getInstance().getSerial());
 
     webServer.on("/wifi", HTTP_POST, &receiveWifi);
     webServer.begin();
@@ -364,7 +368,7 @@ void setup() {
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
         json["event"] = "registerDeviceSession";
-        json["name"] = SDUtil::getInstance().getSerial();
+        // json["name"] = SDUtil::getInstance().getSerial();
         json["isFirstConnection"] = isFirstConnection;
         Serial.println(String(json["name"]));
         json["type"] = "Mirror";
@@ -500,7 +504,7 @@ void loop() {
         }
     }
     else {
-        connectWifiBySdData();
+        // connectWifiBySdData();
     }
 }
 

@@ -33,8 +33,6 @@ public:
 
   static std::vector<String> stringSplit(const String &str, char Delimiter);
 
-  static void listDir(FS &fs, const char *dirname, uint8_t levels);
-
   static ELightMode stringToELightMode(const String &string);
 
   static EDeviceType stringToEDeviceType(const String &string);

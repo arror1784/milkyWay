@@ -13,17 +13,10 @@ const String SDUtil::defaultColorSetsPath_ = "/lightEffect.json";
 
 void SDUtil::init() {
     bool sdStatus = SD.begin(5);
+
     if (!sdStatus) {
         while (1);
     }
-}
-
-String SDUtil::getSerial() {
-    if (_serial.length() == 0) {
-        _serial = SDUtil::readFile(SDUtil::serialPath_);
-        Serial.println(SDUtil::serialPath_);
-    }
-    return _serial;
 }
 
 bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
@@ -79,6 +72,36 @@ String SDUtil::readFile(const String &path) {
     return res;
 }
 
+void SDUtil::listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+  Serial.printf("Listing directory: %s\n", dirname);
+
+  File root = fs.open(dirname);
+  if(!root){
+    Serial.println("Failed to open directory");
+    return;
+  }
+  if(!root.isDirectory()){
+    Serial.println("Not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while(file){
+    if(file.isDirectory()){
+      Serial.print("  DIR : ");
+      Serial.println(file.name());
+      if(levels){
+        listDir(fs, file.name(), levels -1);
+      }
+    } else {
+      Serial.print("  FILE: ");
+      Serial.print(file.name());
+      Serial.print("  SIZE: ");
+      Serial.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
 bool SDUtil::exists(const String &path) {
     File file = SD.open(path);
     return !!file;
