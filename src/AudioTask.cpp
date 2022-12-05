@@ -1,7 +1,7 @@
 #include "AudioTask.h"
 
-AudioTask::AudioTask(): _msgQueue(5), _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT) {
-    _audioControl.setVolume(volume);
+AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(5), _shuffleMsgQueue(5) {
+    _audioControl.setVolume(_volume);
 }
 
 void AudioTask::sendMsg(AudioMsgData *dataA) {
@@ -25,10 +25,10 @@ void AudioTask::task() {
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
                 _audioControl.resume();
-                isShuffle = msg->isShuffle;
+                _isShuffle = msg->isShuffle;
 
-                if (isShuffle) {
-                    nextTick = millis() + _shuffleAudioTIme;
+                if (_isShuffle) {
+                    _nextTick = millis() + _shuffleAudioTIme;
                 }
             }
             else {
@@ -41,42 +41,67 @@ void AudioTask::task() {
     _audioControl.loop();
 
     if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
-        if (_syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
-            auto gain = std::abs(_audioControl.getLastGain()) / volume;
+        if (_syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - _tick)) {
+            auto gain = std::abs(_audioControl.getLastGain()) / _volume;
 
-            tick = xTaskGetTickCount();
+            _tick = xTaskGetTickCount();
             auto *dataN = new NeoPixelMsgData();
             dataN->lightEffect = LightEffect();
             dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
             dataN->mode = ELightMode::None;
 
-            if (gains.size() > 10) {
-                gains.erase(gains.begin());
+            if (_gains.size() > 10) {
+                _gains.erase(_gains.begin());
             }
-            gains.push_back(gain);
+            _gains.push_back(gain);
 
             int total = 0;
-            for (auto savedGain: gains) {
+            for (auto savedGain: _gains) {
                 total += savedGain;
             }
 
-            dataN->sync = total / gains.size();
+            dataN->sync = total / _gains.size();
 
             NeoPixelTask::getInstance().sendMsg(dataN);
         }
     }
-//    if (isShuffle && nextTick <= millis()) {
-//        auto *dataS = new ShuffleMsgData();
-//
-//        dataS->events = EShuffleSMQEvent::FINISH_SOUND;
-//        dataS->enable = true;
-//
-//        shuffleMsgQueue.send(dataS);
-//
-//        nextTick = 0xFFFFFFFF;
-//    }
+
+    if (_isShuffle && _nextTick <= millis()) {
+        auto *dataS = new ShuffleMsgData();
+
+        dataS->events = EShuffleSMQEvent::FINISH_SOUND;
+        dataS->enable = true;
+
+        _shuffleMsgQueue.send(dataS);
+
+        _isShuffle = false;
+        setNextTick(0xFFFFFFFF);
+    }
+}
+
+ShuffleMsgData *AudioTask::getShuffleMsg() {
+    return _shuffleMsgQueue.recv();
 }
 
 void AudioTask::setIsDownloading(bool isDownloading) {
     _audioControl.setIsDownloading(isDownloading);
+}
+
+void AudioTask::setNextTick(unsigned long tick) {
+    _nextTick = tick;
+}
+
+void AudioTask::playNext() {
+    _audioControl.playNext();
+}
+
+void audio_info(const char *info) {
+    Serial.print("info        ");
+    Serial.println(info);
+}
+
+void audio_eof_mp3(const char *info) {  //end of file
+    Serial.print("eof_mp3     ");
+    Serial.println(info);
+    AudioTask::getInstance().playNext();
 }

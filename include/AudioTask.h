@@ -1,6 +1,7 @@
 #ifndef MILKYWAY_AUDIO_TASK_H
 #define MILKYWAY_AUDIO_TASK_H
 
+#include "ShuffleMsgQueue.h"
 #include "NeoPixelTask.h"
 #include "AudioMsgQueue.h"
 #include "Singleton.h"
@@ -18,16 +19,23 @@ public:
 
     void task();
 
+    void playNext();
+
+    ShuffleMsgData *getShuffleMsg();
+
     void setIsDownloading(bool isDownloading);
 
 private:
-    int volume = 10;  // 0...21
-    std::vector<int> gains;
-    TickType_t tick = xTaskGetTickCount();
-    bool isShuffle = false;
-    unsigned long nextTick = 0xFFFFFFFF;
+    void setNextTick(unsigned long tick);
+
+    int _volume = 10;  // 0...21
+    std::vector<int> _gains;
+    TickType_t _tick = xTaskGetTickCount();
+    bool _isShuffle = false;
+    unsigned long _nextTick = 0xFFFFFFFF;
 
     AudioMsgQueue _msgQueue;
+    ShuffleMsgQueue _shuffleMsgQueue;
     AudioControl _audioControl;
 
     const long _shuffleAudioTIme = 5500;

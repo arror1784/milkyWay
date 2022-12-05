@@ -1,6 +1,6 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _msgQueue(5) {
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(5), _msgQueue(5) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},
@@ -47,6 +47,11 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
 
 void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
     _msgQueue.send(dataN);
+}
+
+void NeoPixelTask::reset() {
+    _neoPixel.off();
+    setNextTick(0xFFFFFFFF);
 }
 
 const LightEffect &NeoPixelTask::getLightEffect(ELightMode mode) {
@@ -117,8 +122,6 @@ void NeoPixelTask::refreshMode() {
         _previousSpeed = speed / _neoPixel.getMaxBrightness();
     }
     addNextTick(_previousSpeed);
-
-    ticked();
 }
 
 void NeoPixelTask::task() {
@@ -134,15 +137,14 @@ void NeoPixelTask::task() {
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
-//                _isShuffle = msg->isShuffle;
-//                if (_isShuffle) {
-//                    _count = _oneCycleCount;
-//                }
+                _isShuffle = msg->isShuffle;
+                if (_isShuffle) {
+                    _count = _oneCycleCount;
+                }
                 refreshMode();
             }
             else {
-                _neoPixel.off();
-                setNextTick(0xFFFFFFFF);
+                reset();
             }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
@@ -164,14 +166,14 @@ void NeoPixelTask::ticked() {
         }
         else {
             _neoPixel.on();
-//            if (_count > 0) {
-//                _count -= 1;
-//            }
-//            else if (_count == 0) {
-//                finishCycle();
-//                setNextTick(0xFFFFFFFF);
-//                return;
-//            }
+            if (_count > 0) {
+                _count -= 1;
+            }
+            else if (_count == 0) {
+                finishCycle();
+                setNextTick(0xFFFFFFFF);
+                return;
+            }
         }
     }
     else if (_mode == ELightMode::Breathing || _mode == ELightMode::ColorChange) {
@@ -219,13 +221,19 @@ void NeoPixelTask::setNextTick(unsigned long tick) {
 
 void NeoPixelTask::finishCycle() {
     if (_isShuffle) {
-//        auto dataS = new ShuffleMsgData();
-//
-//        dataS->enable = true;
-//        dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
-//
-//        MsgQueues::sendShuffleMsg(dataS);
-//
-//        _isShuffle = false;
+        auto dataS = new ShuffleMsgData();
+
+        dataS->enable = true;
+        dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
+
+        _shuffleMsgQueue.send(dataS);
+
+        _isShuffle = false;
+
+        reset();
     }
+}
+
+ShuffleMsgData *NeoPixelTask::getShuffleMsg() {
+    return _shuffleMsgQueue.recv();
 }

@@ -1,6 +1,7 @@
 #ifndef MILKYWAY_NEOPIXEL_TASK_H
 #define MILKYWAY_NEOPIXEL_TASK_H
 
+#include "ShuffleMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "NeoPixel.h"
 #include "UserModeControl.h"
@@ -20,6 +21,8 @@ public:
 
     unsigned int getSpeed();
 
+    ShuffleMsgData *getShuffleMsg();
+
     void setLightEffect(const LightEffect &lightEffect);
 
     void addNextTick(unsigned long speed);
@@ -32,6 +35,8 @@ public:
 
 private:
     void refreshColorSet();
+
+    void reset();
 
     void setNextTick(unsigned long tick);
 
@@ -49,6 +54,7 @@ private:
     int _count = -1;
 
     NeoPixelMsgQueue _msgQueue;
+    ShuffleMsgQueue _shuffleMsgQueue;
 
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;
