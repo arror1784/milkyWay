@@ -95,10 +95,10 @@ void NeoPixelTask::setLightEffect(const LightEffect &lightEffect) {
     if (mode == ELightMode::Blinking) _blinkingLightEffect = lightEffect;
     if (mode == ELightMode::ColorChange) _colorChangeLightEffect = lightEffect;
 
-    setColorSet();
+    refreshColorSet();
 }
 
-void NeoPixelTask::setColorSet() {
+void NeoPixelTask::refreshColorSet() {
     const LightEffect &lightEffect = getLightEffect(_mode);
 
     auto randomColorSetIndex = random((long) lightEffect.colorSets.size());
@@ -106,7 +106,7 @@ void NeoPixelTask::setColorSet() {
 }
 
 void NeoPixelTask::refreshMode() {
-    setColorSet();
+    refreshColorSet();
 
     unsigned int speed = getSpeed();
 
@@ -191,6 +191,10 @@ void NeoPixelTask::ticked() {
         }
         else if (brightness == 0) {
             _neoPixel.setBreathingStatus(EBreathingStatus::UP);
+            if (_mode == ELightMode::ColorChange) {
+                refreshColorSet();
+            }
+
             if (_count > 0) {
                 _count -= 1;
             }

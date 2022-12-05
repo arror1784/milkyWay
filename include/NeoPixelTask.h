@@ -31,7 +31,7 @@ public:
     void finishCycle();
 
 private:
-    void setColorSet();
+    void refreshColorSet();
 
     void setNextTick(unsigned long tick);
 
