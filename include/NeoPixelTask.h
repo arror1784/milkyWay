@@ -1,7 +1,7 @@
 #ifndef MILKYWAY_NEOPIXEL_TASK_H
 #define MILKYWAY_NEOPIXEL_TASK_H
 
-#include "MsgQueues.h"
+#include "NeoPixelMsgQueue.h"
 #include "NeoPixel.h"
 #include "UserModeControl.h"
 
@@ -13,6 +13,8 @@
 class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
     NeoPixelTask();
+
+    void sendMsg(NeoPixelMsgData *dataN);
 
     const LightEffect &getLightEffect(ELightMode mode);
 
@@ -46,6 +48,8 @@ private:
 
     int _count = -1;
 
+    NeoPixelMsgQueue _msgQueue;
+
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;
     LightEffect _colorChangeLightEffect;
@@ -54,11 +58,11 @@ private:
     LightEffect _defaultBlinkingLightEffect;
     LightEffect _defaultColorChangeLightEffect;
 
-    const std::vector<unsigned int> _breathingSpeeds {
+    const std::vector<unsigned int> _breathingSpeeds{
         1500, 2500, 4000, 5000, 6000, 8000, 10000, 12000, 15000
     };
 
-    const std::vector<unsigned int> _blinkingSpeeds {
+    const std::vector<unsigned int> _blinkingSpeeds{
         500, 1000, 1500, 2000, 2500, 3000, 5000
     };
 

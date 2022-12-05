@@ -9,8 +9,9 @@
 #include "AudioControl.h"
 #include "NeoPixel.h"
 
-#include "MsgQueues.h"
+#include "AudioMsgQueue.h"
 #include "AudioDownloadMsgQueue.h"
+#include "ShuffleMsgQueue.h"
 #include "NeoPixelTask.h"
 
 #include "EepromControl.h"
@@ -42,6 +43,9 @@ void neoPixelTask(void *params) {
 
 AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
 
+AudioMsgQueue audioMsgQueue(5);
+ShuffleMsgQueue shuffleMsgQueue(5);
+
 void audioTask(void *params) {
     const long shuffleAudioTIme = 5500;
 
@@ -53,8 +57,7 @@ void audioTask(void *params) {
     unsigned long nextTick = 0xFFFFFFFF;
 
     while (1) {
-        Serial.println("audioTask");
-        AudioMsgData *msg = MsgQueues::getAudioMsg();
+        AudioMsgData *msg = audioMsgQueue.recv();
 
         if (audioControl.isDownloading()) {
             if (msg != nullptr) delete msg;
@@ -107,7 +110,7 @@ void audioTask(void *params) {
 
                 dataN->sync = total / gains.size();
 
-                MsgQueues::sendNeoPixelMsg(dataN);
+                NeoPixelTask::getInstance().sendMsg(dataN);
             }
         }
 
@@ -117,7 +120,7 @@ void audioTask(void *params) {
             dataS->events = EShuffleSMQEvent::FINISH_SOUND;
             dataS->enable = true;
 
-            MsgQueues::sendShuffleMsg(dataS);
+            shuffleMsgQueue.send(dataS);
 
             nextTick = 0xFFFFFFFF;
         }
@@ -132,46 +135,49 @@ void shuffleTask(void *params) {
     bool isNextSound = true;
 
     while (1) {
-        ShuffleMsgData *dataS = MsgQueues::getShuffleMsg();
+        ShuffleMsgData *dataS = shuffleMsgQueue.recv();
 
-        if (dataS->events == EShuffleSMQEvent::UPDATE_ENABLE) {
-            auto *dataA = new AudioMsgData();
-            if (dataS->enable) {
-                dataA->enable = true;
+        if (dataS != nullptr) {
+            if (dataS->events == EShuffleSMQEvent::UPDATE_ENABLE) {
+                auto *dataA = new AudioMsgData();
+                if (dataS->enable) {
+                    dataA->enable = true;
+                }
+                else {
+                    dataA->enable = false;
+                }
+                audioMsgQueue.send(dataA);
+
+                auto *dataN = new NeoPixelMsgData();
+                dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+                dataN->enable = false;
+                NeoPixelTask::getInstance().sendMsg(dataN);
             }
-            else {
-                dataA->enable = false;
+            else if (dataS->events == EShuffleSMQEvent::FINISH_NEO_PIXEL) {
+                isNextSound = false;
+                nextTick = millis() + shuffleSleepTIme;
             }
-            MsgQueues::sendAudioMsg(dataA);
+            else if (dataS->events == EShuffleSMQEvent::FINISH_SOUND) {
+                isNextSound = true;
+                nextTick = millis() + shuffleSleepTIme;
+            }
 
-            auto *dataN = new NeoPixelMsgData();
-            dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
-            dataN->enable = false;
-            MsgQueues::sendNeoPixelMsg(dataN);
+            delete dataS;
         }
-        else if (dataS->events == EShuffleSMQEvent::FINISH_NEO_PIXEL) {
-            isNextSound = false;
-            nextTick = millis() + shuffleSleepTIme;
-        }
-        else if (dataS->events == EShuffleSMQEvent::FINISH_SOUND) {
-            isNextSound = true;
-            nextTick = millis() + shuffleSleepTIme;
-        }
-
         if (nextTick <= millis()) {
             if (isNextSound) {
                 auto *dataA = new AudioMsgData();
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
                 dataA->enable = true;
                 dataA->isShuffle = true;
-                MsgQueues::sendAudioMsg(dataA);
+                audioMsgQueue.send(dataA);
             }
             else {
                 auto *dataN = new NeoPixelMsgData();
                 dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
                 dataN->enable = true;
                 dataN->isShuffle = true;
-                MsgQueues::sendNeoPixelMsg(dataN);
+                NeoPixelTask::getInstance().sendMsg(dataN);
             }
             nextTick = 0xFFFFFFFF;
         }
@@ -216,9 +222,9 @@ void processUserMode(const JsonObject &data) {
         default:
             break;
     }
-    MsgQueues::sendAudioMsg(dataA);
-    MsgQueues::sendNeoPixelMsg(dataN);
-    MsgQueues::sendShuffleMsg(dataS);
+    audioMsgQueue.send(dataA);
+    NeoPixelTask::getInstance().sendMsg(dataN);
+    shuffleMsgQueue.send(dataS);
 
     UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 
@@ -227,7 +233,7 @@ void processUserMode(const JsonObject &data) {
     dataN2->events = ENeoPixelMQEvent::UPDATE_MODE;
     dataN2->mode = Util::stringToELightMode(data["lightMode"]);
 
-    MsgQueues::sendNeoPixelMsg(dataN2);
+    NeoPixelTask::getInstance().sendMsg(dataN2);
 }
 
 void processPlayList(const JsonObject &data) {
@@ -235,7 +241,7 @@ void processPlayList(const JsonObject &data) {
     dataA->list = WebSocketClient::parsePlayList(data);
     dataA->events = EAudioMQEvent::UPDATE_PLAYLIST;
 
-    MsgQueues::sendAudioMsg(dataA);
+    audioMsgQueue.send(dataA);
 }
 
 void processLightEffects(const JsonArray &array) {
@@ -250,7 +256,7 @@ void processLightEffects(const JsonArray &array) {
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
-        MsgQueues::sendNeoPixelMsg(dataN);
+        NeoPixelTask::getInstance().sendMsg(dataN);
 
         if (dataN->mode == ELightMode::Blinking) isBlinkingExists = true;
         else if (dataN->mode == ELightMode::Breathing) isBreathingExists = true;
@@ -264,7 +270,7 @@ void processLightEffects(const JsonArray &array) {
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
-        MsgQueues::sendNeoPixelMsg(dataN);
+        NeoPixelTask::getInstance().sendMsg(dataN);
     }
     if (isBreathingExists) {
         auto *dataN = new NeoPixelMsgData();
@@ -273,7 +279,7 @@ void processLightEffects(const JsonArray &array) {
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
-        MsgQueues::sendNeoPixelMsg(dataN);
+        NeoPixelTask::getInstance().sendMsg(dataN);
     }
     if (isColorChangeExists) {
         auto *dataN = new NeoPixelMsgData();
@@ -282,7 +288,7 @@ void processLightEffects(const JsonArray &array) {
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
         dataN->mode = ELightMode::None;
 
-        MsgQueues::sendNeoPixelMsg(dataN);
+        NeoPixelTask::getInstance().sendMsg(dataN);
     }
 }
 
@@ -496,9 +502,9 @@ void setup() {
                     }
                 }
 
-                MsgQueues::sendAudioMsg(dataA);
-                MsgQueues::sendNeoPixelMsg(dataN);
-                MsgQueues::sendShuffleMsg(dataS);
+                audioMsgQueue.send(dataA);
+                NeoPixelTask::getInstance().sendMsg(dataN);
+                shuffleMsgQueue.send(dataS);
             }
         }
         else if (doc["event"] == "Ping") {

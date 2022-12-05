@@ -1,6 +1,6 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800) {
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _msgQueue(5) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},
@@ -43,6 +43,10 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
         _defaultBlinkingLightEffect.colorSets.push_back(colorSet);
         _defaultColorChangeLightEffect.colorSets.push_back(colorSet);
     }
+}
+
+void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
+    _msgQueue.send(dataN);
 }
 
 const LightEffect &NeoPixelTask::getLightEffect(ELightMode mode) {
@@ -118,7 +122,7 @@ void NeoPixelTask::refreshMode() {
 }
 
 void NeoPixelTask::task() {
-    NeoPixelMsgData *msg = MsgQueues::getNeoPixelMsg();
+    NeoPixelMsgData *msg = _msgQueue.recv();
 
     if (msg != nullptr) {
         if (msg->events == ENeoPixelMQEvent::UPDATE_EFFECT) {
@@ -131,7 +135,7 @@ void NeoPixelTask::task() {
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
                 _isShuffle = msg->isShuffle;
-                if(_isShuffle) {
+                if (_isShuffle) {
                     _count = _oneCycleCount;
                 }
                 refreshMode();
@@ -162,7 +166,8 @@ void NeoPixelTask::ticked() {
             _neoPixel.on();
             if (_count > 0) {
                 _count -= 1;
-            } else if (_count == 0) {
+            }
+            else if (_count == 0) {
                 finishCycle();
                 setNextTick(0xFFFFFFFF);
                 return;
@@ -188,7 +193,8 @@ void NeoPixelTask::ticked() {
             _neoPixel.setBreathingStatus(EBreathingStatus::UP);
             if (_count > 0) {
                 _count -= 1;
-            } else if (_count == 0) {
+            }
+            else if (_count == 0) {
                 finishCycle();
                 setNextTick(0xFFFFFFFF);
                 return;
@@ -208,14 +214,14 @@ void NeoPixelTask::setNextTick(unsigned long tick) {
 }
 
 void NeoPixelTask::finishCycle() {
-    if(_isShuffle) {
-        auto dataS = new ShuffleMsgData();
-
-        dataS->enable = true;
-        dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
-
-        MsgQueues::sendShuffleMsg(dataS);
-
-        _isShuffle = false;
+    if (_isShuffle) {
+//        auto dataS = new ShuffleMsgData();
+//
+//        dataS->enable = true;
+//        dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
+//
+//        MsgQueues::sendShuffleMsg(dataS);
+//
+//        _isShuffle = false;
     }
 }
