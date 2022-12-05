@@ -15,46 +15,54 @@ class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
     NeoPixelTask();
 
-    void sendMsg(NeoPixelMsgData *dataN);
-
-    const LightEffect &getLightEffect(ELightMode mode);
-
-    unsigned int getSpeed();
-
     ShuffleMsgData *getShuffleMsg();
 
-    void setLightEffect(const LightEffect &lightEffect);
+    void sendMsg(NeoPixelMsgData *dataN);
 
-    void addNextTick(unsigned long speed);
+    void updateCustomLightEffect(const LightEffect &lightEffect);
+
+    void setCurrentLightEffect(ELightMode mode);
 
     void task();
 
+private:
     void ticked();
+
+    // breath 기능 중 싸이클이 끝날때마다 true를 반환합니다.
+    bool breath();
+
+    // blink 기능 중 싸이클이 끝날때마다 true를 반환합니다.
+    bool blink();
+
+    void sync();
 
     void finishCycle();
 
-private:
-    void refreshColorSet();
-
     void reset();
 
-    void setNextTick(unsigned long tick);
+    void refreshColorSet();
 
-    void refreshMode();
+    void refreshSpeed();
+
+    void refreshNextTick();
 
     ELightMode _mode = ELightMode::None;
 
-    unsigned long _previousSpeed = 0;
+    unsigned long _speed = 0;
     unsigned long _nextTick = 0xFFFFFFFF;
 
-    bool _enabled = false;
+    uint8_t _sync = 0;
+    bool _isSyncMode = false;
     NeoPixel _neoPixel;
     bool _isShuffle = false;
 
+    // -1일 경우 무한 반복
     int _count = -1;
 
     NeoPixelMsgQueue _msgQueue;
     ShuffleMsgQueue _shuffleMsgQueue;
+
+    LightEffect *_currentLightEffect;
 
     LightEffect _breathingLightEffect;
     LightEffect _blinkingLightEffect;

@@ -14,11 +14,6 @@ void ShuffleTask::task() {
     if (dataS != nullptr) {
         if (dataS->events == EShuffleSMQEvent::UPDATE_ENABLE) {
             if (dataS->enable) {
-                Serial.print("dataS :");
-                Serial.println((int) dataS->events);
-                Serial.print("dataS :");
-                Serial.println(dataS->enable);
-
                 auto *dataA = new AudioMsgData();
                 dataA->isShuffle = true;
                 AudioTask::getInstance().sendMsg(dataA);
@@ -38,7 +33,7 @@ void ShuffleTask::task() {
 
     if (dataS != nullptr) {
         if (dataS->events == EShuffleSMQEvent::FINISH_NEO_PIXEL) {
-            _isNextSound = false;
+            _isNextSound = true;
             _nextTick = millis() + _shuffleSleepTIme;
         }
         delete dataS;
@@ -48,7 +43,7 @@ void ShuffleTask::task() {
 
     if (dataS != nullptr) {
         if (dataS->events == EShuffleSMQEvent::FINISH_SOUND) {
-            _isNextSound = true;
+            _isNextSound = false;
             _nextTick = millis() + _shuffleSleepTIme;
         }
 
@@ -57,11 +52,11 @@ void ShuffleTask::task() {
 
     if (_nextTick <= millis()) {
         if (_isNextSound) {
-//            auto *dataA = new AudioMsgData();
-//            dataA->events = EAudioMQEvent::UPDATE_ENABLE;
-//            dataA->enable = true;
-//            dataA->isShuffle = true;
-//            AudioTask::getInstance().sendMsg(dataA);
+            auto *dataA = new AudioMsgData();
+            dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+            dataA->enable = true;
+            dataA->isShuffle = true;
+            AudioTask::getInstance().sendMsg(dataA);
         }
         else {
             auto *dataN = new NeoPixelMsgData();

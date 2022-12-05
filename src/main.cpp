@@ -36,10 +36,9 @@ void processUserMode(const JsonObject &data) {
 
     NeoPixelTask::getInstance().sendMsg(dataN);
 
-    UserModeControl::getInstance().interactionMode = Util::stringToEInteractionMode(data["interactionMode"]);
-    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
+    EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
+    if (newInteractionMode == EInteractionMode::Shuffle) {
         auto *dataS = new ShuffleMsgData();
         dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
         dataS->enable = true;
@@ -52,24 +51,46 @@ void processUserMode(const JsonObject &data) {
         dataA->events = EAudioMQEvent::UPDATE_ENABLE;
         dataA->enable = false;
 
-        auto *dataN2 = new NeoPixelMsgData();
-        dataN2->lightEffect = LightEffect();
-        dataN2->events = ENeoPixelMQEvent::UPDATE_ENABLE;
-        dataN2->mode = ELightMode::None;
-        dataN2->enable = false;
+        dataN = new NeoPixelMsgData();
+        dataN->lightEffect = LightEffect();
+        dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+        dataN->mode = ELightMode::None;
+        dataN->enable = false;
 
-        if (UserModeControl::getInstance().interactionMode == EInteractionMode::LightOnly) {
-            dataN2->enable = true;
+        if (newInteractionMode == EInteractionMode::LightOnly) {
+            dataN->enable = true;
             dataA->enable = false;
         }
-        if (UserModeControl::getInstance().interactionMode == EInteractionMode::SoundOnly ||
-            UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
-            dataN2->enable = false;
+        else if (newInteractionMode == EInteractionMode::SoundOnly) {
+            dataN->enable = false;
             dataA->enable = true;
         }
+        else if (newInteractionMode == EInteractionMode::Synchronization) {
+            dataN->enable = true;
+            dataA->enable = true;
+        }
+
         AudioTask::getInstance().sendMsg(dataA);
-        NeoPixelTask::getInstance().sendMsg(dataN2);
+        NeoPixelTask::getInstance().sendMsg(dataN);
     }
+
+    if (newInteractionMode != UserModeControl::getInstance().interactionMode) {
+        dataN = new NeoPixelMsgData();
+        dataN->lightEffect = LightEffect();
+        dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
+
+        if (newInteractionMode == EInteractionMode::Synchronization) {
+            dataN->enable = true;
+        }
+        else {
+            dataN->enable = false;
+        }
+
+        NeoPixelTask::getInstance().sendMsg(dataN);
+    }
+
+    UserModeControl::getInstance().interactionMode = newInteractionMode;
+    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 }
 
 void processPlayList(const JsonObject &data) {

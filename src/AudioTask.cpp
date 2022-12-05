@@ -18,7 +18,6 @@ void AudioTask::task() {
     }
     if (msg != nullptr) {
         if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
-            Serial.println("updatePLAYLIST");
             auto &list = msg->list;
             _audioControl.setPlayList(list);
         }
@@ -48,7 +47,7 @@ void AudioTask::task() {
             auto *dataN = new NeoPixelMsgData();
             dataN->lightEffect = LightEffect();
             dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
-            dataN->mode = ELightMode::None;
+            dataN->enable = true;
 
             if (_gains.size() > 10) {
                 _gains.erase(_gains.begin());
@@ -76,6 +75,8 @@ void AudioTask::task() {
 
         _isShuffle = false;
         setNextTick(0xFFFFFFFF);
+
+        _audioControl.pause();
     }
 }
 

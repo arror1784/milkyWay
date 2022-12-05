@@ -1,6 +1,7 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(5), _msgQueue(5) {
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(5),
+                               _msgQueue(5) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},
@@ -45,83 +46,43 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
     }
 }
 
+ShuffleMsgData *NeoPixelTask::getShuffleMsg() {
+    return _shuffleMsgQueue.recv();
+}
+
 void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
     _msgQueue.send(dataN);
 }
 
-void NeoPixelTask::reset() {
-    _neoPixel.off();
-    setNextTick(0xFFFFFFFF);
-}
-
-const LightEffect &NeoPixelTask::getLightEffect(ELightMode mode) {
-    switch (mode) {
-        case ELightMode::Breathing:
-            return _breathingLightEffect.id == 0
-                   ? _defaultBreathingLightEffect : _breathingLightEffect;
-        case ELightMode::Blinking:
-            return _blinkingLightEffect.id == 0
-                   ? _defaultBlinkingLightEffect : _blinkingLightEffect;
-        case ELightMode::ColorChange:
-            return _colorChangeLightEffect.id == 0
-                   ? _defaultColorChangeLightEffect : _colorChangeLightEffect;
-        default:
-            break;
-    }
-
-    auto randomValue = random(3);
-
-    if (randomValue == 0) return getLightEffect(ELightMode::Breathing);
-    if (randomValue == 1) return getLightEffect(ELightMode::Blinking);
-    return getLightEffect(ELightMode::ColorChange);
-}
-
-unsigned int NeoPixelTask::getSpeed() {
-    const LightEffect &lightEffect = getLightEffect(_mode);
-
-    switch (lightEffect.mode) {
-        case ELightMode::Blinking:
-            return lightEffect.isRandomSpeed
-                   ? _blinkingSpeeds[random(_blinkingSpeeds.size())] : lightEffect.speed;
-        case ELightMode::Breathing:
-        case ELightMode::ColorChange:
-            return lightEffect.isRandomSpeed
-                   ? _breathingSpeeds[random(_breathingSpeeds.size())] : lightEffect.speed;
-        default:
-            break;
-    }
-    return lightEffect.speed;
-}
-
-void NeoPixelTask::setLightEffect(const LightEffect &lightEffect) {
+void NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
     ELightMode mode = lightEffect.mode;
 
     if (mode == ELightMode::Breathing) _breathingLightEffect = lightEffect;
     if (mode == ELightMode::Blinking) _blinkingLightEffect = lightEffect;
     if (mode == ELightMode::ColorChange) _colorChangeLightEffect = lightEffect;
-
-    refreshColorSet();
 }
 
-void NeoPixelTask::refreshColorSet() {
-    const LightEffect &lightEffect = getLightEffect(_mode);
-
-    auto randomColorSetIndex = random((long) lightEffect.colorSets.size());
-    _neoPixel.setColorSet(lightEffect.colorSets[randomColorSetIndex]);
-}
-
-void NeoPixelTask::refreshMode() {
-    refreshColorSet();
-
-    unsigned int speed = getSpeed();
-
-    if (_mode == ELightMode::Blinking) {
-        _previousSpeed = speed;
+// 현재 조명효과를 모드를 기반으로 바꾼다.
+void NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
+    switch (mode) {
+        case ELightMode::Breathing:
+            _currentLightEffect = _breathingLightEffect.id == 0
+                                  ? &_defaultBreathingLightEffect : &_breathingLightEffect;
+            break;
+        case ELightMode::Blinking:
+            _currentLightEffect = _blinkingLightEffect.id == 0
+                                  ? &_defaultBlinkingLightEffect : &_blinkingLightEffect;
+            break;
+        case ELightMode::ColorChange:
+            _currentLightEffect = _colorChangeLightEffect.id == 0
+                                  ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
+            break;
+        default:
+            // TODO : Mixed일 때 랜덤으로 골라지는 조명 효과 중복 체크 넣어야 함
+            auto randomValue = random(3);
+            setCurrentLightEffect((ELightMode) randomValue);
+            break;
     }
-    else if (_mode == ELightMode::Breathing || _mode == ELightMode::ColorChange) {
-        _previousSpeed = speed / _neoPixel.getMaxBrightness();
-    }
-    addNextTick(_previousSpeed);
 }
 
 void NeoPixelTask::task() {
@@ -129,26 +90,33 @@ void NeoPixelTask::task() {
 
     if (msg != nullptr) {
         if (msg->events == ENeoPixelMQEvent::UPDATE_EFFECT) {
-            setLightEffect(msg->lightEffect);
+            updateCustomLightEffect(msg->lightEffect);
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
+            setCurrentLightEffect(msg->mode);
             _mode = msg->mode;
-            refreshMode();
+            refreshColorSet();
+            refreshSpeed();
+            refreshNextTick();
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
+                Serial.println("msg->enable" + String(msg->enable));
                 _isShuffle = msg->isShuffle;
                 if (_isShuffle) {
                     _count = _oneCycleCount;
                 }
-                refreshMode();
+                refreshColorSet();
+                refreshSpeed();
+                refreshNextTick();
             }
             else {
                 reset();
             }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
-//            _neoPixel.on(msg->sync);
+            _isSyncMode = msg->enable;
+            _sync = msg->sync;
         }
         delete msg;
     }
@@ -159,81 +127,131 @@ void NeoPixelTask::task() {
 }
 
 void NeoPixelTask::ticked() {
-    if (_mode == ELightMode::Blinking) {
-        if (_neoPixel.isOn()) {
-            _neoPixel.off();
-            _previousSpeed = getSpeed();
-        }
-        else {
-            _neoPixel.on();
-            if (_count > 0) {
-                _count -= 1;
-            }
-            else if (_count == 0) {
-                finishCycle();
-                setNextTick(0xFFFFFFFF);
-                return;
-            }
-        }
+    bool isCycleFinished = false;
+
+    if (_isSyncMode) {
+        sync();
     }
-    else if (_mode == ELightMode::Breathing || _mode == ELightMode::ColorChange) {
-        EBreathingStatus currentBreathingStatus = _neoPixel.getBreathingStatus();
-        if (currentBreathingStatus == EBreathingStatus::UP) {
-            _neoPixel.increaseBrightness();
-        }
-        else {
-            _neoPixel.lowerBrightness();
-        }
-
-        auto brightness = _neoPixel.getBrightness();
-        auto maxBrightness = _neoPixel.getMaxBrightness();
-
-        if (brightness == maxBrightness) {
-            _neoPixel.setBreathingStatus(EBreathingStatus::DOWN);
-        }
-        else if (brightness == 0) {
-            _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-            if (_mode == ELightMode::ColorChange) {
-                refreshColorSet();
-            }
-
-            if (_count > 0) {
-                _count -= 1;
-            }
-            else if (_count == 0) {
-                finishCycle();
-                setNextTick(0xFFFFFFFF);
-                return;
-            }
-            _previousSpeed = getSpeed() / maxBrightness;
-        }
+    else if (_currentLightEffect->mode == ELightMode::Blinking) {
+        isCycleFinished = blink();
     }
-    addNextTick(_previousSpeed);
+    else if (_currentLightEffect->mode == ELightMode::Breathing ||
+             _currentLightEffect->mode == ELightMode::ColorChange) {
+        isCycleFinished = breath();
+    }
+
+    if (isCycleFinished) finishCycle();
 }
 
-void NeoPixelTask::addNextTick(unsigned long speed) {
-    _nextTick = millis() + speed;
+bool NeoPixelTask::breath() {
+    EBreathingStatus currentBreathingStatus = _neoPixel.getBreathingStatus();
+    if (currentBreathingStatus == EBreathingStatus::UP) {
+        _neoPixel.increaseBrightness();
+    }
+    else {
+        _neoPixel.lowerBrightness();
+    }
+
+    auto brightness = _neoPixel.getBrightness();
+    auto maxBrightness = _neoPixel.getMaxBrightness();
+
+    if (brightness == maxBrightness) {
+        _neoPixel.setBreathingStatus(EBreathingStatus::DOWN);
+    }
+    else if (brightness == 0) {
+        _neoPixel.setBreathingStatus(EBreathingStatus::UP);
+        if (_mode == ELightMode::ColorChange) {
+            refreshColorSet();
+        }
+        refreshSpeed();
+        refreshNextTick();
+        return true;
+    }
+    refreshNextTick();
+    return false;
 }
 
-void NeoPixelTask::setNextTick(unsigned long tick) {
-    _nextTick = tick;
+bool NeoPixelTask::blink() {
+    if (_neoPixel.isOn()) {
+        _neoPixel.off();
+        refreshSpeed();
+        refreshNextTick();
+        return true;
+    }
+    _neoPixel.on();
+
+    refreshNextTick();
+
+    return false;
+}
+
+void NeoPixelTask::sync() {
+    _speed = 24;
+    _neoPixel.on(_sync);
+
+    refreshNextTick();
 }
 
 void NeoPixelTask::finishCycle() {
-    if (_isShuffle) {
-        auto dataS = new ShuffleMsgData();
+    if (_count == -1) {
+        if (_mode == ELightMode::Mixed) {
+            setCurrentLightEffect(_mode);
+            refreshColorSet();
+            refreshSpeed();
+            refreshNextTick();
+        }
+    }
+    else if (_isShuffle) {
+        if (_count > 0) {
+            _count -= 1;
+        }
+        else if (_count == 0) {
+            auto dataS = new ShuffleMsgData();
 
-        dataS->enable = true;
-        dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
+            dataS->enable = true;
+            dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
 
-        _shuffleMsgQueue.send(dataS);
+            _shuffleMsgQueue.send(dataS);
 
-        _isShuffle = false;
+            _count = -1;
 
-        reset();
+            reset();
+        }
     }
 }
 
-ShuffleMsgData *NeoPixelTask::getShuffleMsg() {
-    return _shuffleMsgQueue.recv();
+void NeoPixelTask::reset() {
+    _neoPixel.off();
+    _isShuffle = false;
+    _nextTick = 0xFFFFFFFF;
+}
+
+// 네오픽셀에게 현재 조명효과내에 있는 컬러셋 중 하나로 갱신하여 넘겨준다.
+// TODO : 컬러셋 중복 체크 넣어야 함
+void NeoPixelTask::refreshColorSet() {
+    auto randomColorSetIndex = random((long) _currentLightEffect->colorSets.size());
+    _neoPixel.setColorSet(_currentLightEffect->colorSets[randomColorSetIndex]);
+}
+
+// 현재 조명효과의 모드에 따른 스피드를 넣는다.
+void NeoPixelTask::refreshSpeed() {
+    switch (_currentLightEffect->mode) {
+        case ELightMode::Blinking:
+            _speed = _currentLightEffect->isRandomSpeed
+                     ? _blinkingSpeeds[random(_blinkingSpeeds.size())] : _currentLightEffect->speed;
+            break;
+        case ELightMode::Breathing:
+        case ELightMode::ColorChange:
+            _speed = (_currentLightEffect->isRandomSpeed
+                      ? _breathingSpeeds[random(_breathingSpeeds.size())] : _currentLightEffect->speed) /
+                     _neoPixel.getMaxBrightness();
+            break;
+        default:
+            break;
+    }
+}
+
+// 현재 스피드를 기반으로 다음 틱 시간을 설정한다.
+void NeoPixelTask::refreshNextTick() {
+    _nextTick = millis() + _speed;
 }
