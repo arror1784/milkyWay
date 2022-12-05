@@ -8,30 +8,20 @@
 #include "SDUtil.h"
 #include "AudioControl.h"
 #include "NeoPixel.h"
+#include "EepromControl.h"
 
-#include "AudioMsgQueue.h"
 #include "AudioDownloadMsgQueue.h"
 #include "ShuffleMsgQueue.h"
 #include "NeoPixelTask.h"
+#include "AudioTask.h"
 
-#include "EepromControl.h"
-
-#define LED_PIN 32
-#define LED_LENGTH 24
-
-#define I2S_DOUT      2
-#define I2S_BCLK      0
-#define I2S_LRC       4
-
-static const String host = "192.168.219.101";
+static const String host = "192.168.0.195";
 static const int port = 6001;
 static const bool ssl = false;
 
 //static const String host = "kira-api.wimcorp.dev";
 //static const int port = 443;
 //static const bool ssl = true;
-
-static const int syncUpdateResolution = 10;
 
 void neoPixelTask(void *params) {
     while (1) {
@@ -41,90 +31,13 @@ void neoPixelTask(void *params) {
     vTaskDelete(nullptr);
 }
 
-AudioControl audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT);
-
-AudioMsgQueue audioMsgQueue(5);
 ShuffleMsgQueue shuffleMsgQueue(5);
 
 void audioTask(void *params) {
-    const long shuffleAudioTIme = 5500;
-
-    int volume = 10;
-    std::vector<int> gains;
-    audioControl.setVolume(volume); // 0...21
-    TickType_t tick = xTaskGetTickCount();
-    bool isShuffle = false;
-    unsigned long nextTick = 0xFFFFFFFF;
-
     while (1) {
-        AudioMsgData *msg = audioMsgQueue.recv();
-
-        if (audioControl.isDownloading()) {
-            if (msg != nullptr) delete msg;
-
-            continue;
-        }
-        if (msg != nullptr) {
-            if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
-                Serial.println("updatePLAYLIST");
-                auto &list = msg->list;
-                audioControl.setPlayList(list);
-            }
-            else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
-                if (msg->enable) {
-                    audioControl.resume();
-                    isShuffle = msg->isShuffle;
-
-                    if (isShuffle) {
-                        nextTick = millis() + shuffleAudioTIme;
-                    }
-                }
-                else {
-                    audioControl.pause();
-                }
-            }
-
-            delete msg;
-        }
-        audioControl.loop();
-
-        if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
-            if (syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - tick)) {
-                auto gain = std::abs(audioControl.getLastGain()) / volume;
-
-                tick = xTaskGetTickCount();
-                auto *dataN = new NeoPixelMsgData();
-                dataN->lightEffect = LightEffect();
-                dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
-                dataN->mode = ELightMode::None;
-
-                if (gains.size() > 10) {
-                    gains.erase(gains.begin());
-                }
-                gains.push_back(gain);
-
-                int total = 0;
-                for (auto savedGain: gains) {
-                    total += savedGain;
-                }
-
-                dataN->sync = total / gains.size();
-
-                NeoPixelTask::getInstance().sendMsg(dataN);
-            }
-        }
-
-        if (isShuffle && nextTick <= millis()) {
-            auto *dataS = new ShuffleMsgData();
-
-            dataS->events = EShuffleSMQEvent::FINISH_SOUND;
-            dataS->enable = true;
-
-            shuffleMsgQueue.send(dataS);
-
-            nextTick = 0xFFFFFFFF;
-        }
+        AudioTask::getInstance().task();
     }
+
     vTaskDelete(nullptr);
 }
 
@@ -142,7 +55,7 @@ void shuffleTask(void *params) {
                 if (dataS->enable) {
                     auto *dataA = new AudioMsgData();
                     dataA->isShuffle = true;
-                    audioMsgQueue.send(dataA);
+                    AudioTask::getInstance().sendMsg(dataA);
 
                     auto *dataN = new NeoPixelMsgData();
                     dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
@@ -168,7 +81,7 @@ void shuffleTask(void *params) {
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
                 dataA->enable = true;
                 dataA->isShuffle = true;
-                audioMsgQueue.send(dataA);
+                AudioTask::getInstance().sendMsg(dataA);
             }
             else {
                 auto *dataN = new NeoPixelMsgData();
@@ -223,7 +136,7 @@ void processUserMode(const JsonObject &data) {
             dataN2->enable = false;
             dataA->enable = true;
         }
-        audioMsgQueue.send(dataA);
+        AudioTask::getInstance().sendMsg(dataA);
         NeoPixelTask::getInstance().sendMsg(dataN2);
     }
 }
@@ -233,7 +146,7 @@ void processPlayList(const JsonObject &data) {
     dataA->list = WebSocketClient::parsePlayList(data);
     dataA->events = EAudioMQEvent::UPDATE_PLAYLIST;
 
-    audioMsgQueue.send(dataA);
+    AudioTask::getInstance().sendMsg(dataA);
 }
 
 void processLightEffects(const JsonArray &array) {
@@ -493,7 +406,7 @@ void setup() {
                     }
                 }
 
-                audioMsgQueue.send(dataA);
+                AudioTask::getInstance().sendMsg(dataA);
                 NeoPixelTask::getInstance().sendMsg(dataN);
                 shuffleMsgQueue.send(dataS);
             }
@@ -523,12 +436,10 @@ void loop() {
     webServer.handleClient();
     wsClient.loop();
 
-    // TODO: 큐를 임베디드 기기가 아닌 서버에서 구현하고, 이를 패치해 오는 방식을 바꾸는 것도 고려
-
     if (WifiModule::getInstance().isConnectedST()) {
         AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
         if (msg != nullptr) {
-            audioControl.setIsDownloading(true);
+            AudioTask::getInstance().setIsDownloading(true);
 
             String protocol = ssl ? "https://" : "http://";
             int id = msg->id;
@@ -541,7 +452,7 @@ void loop() {
                 audioDownloadMsgQueue.send(msg);
             }
             else {
-                audioControl.setIsDownloading(false);
+                AudioTask::getInstance().setIsDownloading(false);
 
                 delete msg;
             }

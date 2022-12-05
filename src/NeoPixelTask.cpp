@@ -134,20 +134,20 @@ void NeoPixelTask::task() {
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
-                _isShuffle = msg->isShuffle;
-                if (_isShuffle) {
-                    _count = _oneCycleCount;
-                }
+//                _isShuffle = msg->isShuffle;
+//                if (_isShuffle) {
+//                    _count = _oneCycleCount;
+//                }
                 refreshMode();
             }
             else {
                 _neoPixel.off();
-                _nextTick = 0xFFFFFFFF;
+                setNextTick(0xFFFFFFFF);
             }
         }
-//        else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
+        else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
 //            _neoPixel.on(msg->sync);
-//        }
+        }
         delete msg;
     }
 
@@ -164,14 +164,14 @@ void NeoPixelTask::ticked() {
         }
         else {
             _neoPixel.on();
-            if (_count > 0) {
-                _count -= 1;
-            }
-            else if (_count == 0) {
-                finishCycle();
-                setNextTick(0xFFFFFFFF);
-                return;
-            }
+//            if (_count > 0) {
+//                _count -= 1;
+//            }
+//            else if (_count == 0) {
+//                finishCycle();
+//                setNextTick(0xFFFFFFFF);
+//                return;
+//            }
         }
     }
     else if (_mode == ELightMode::Breathing || _mode == ELightMode::ColorChange) {

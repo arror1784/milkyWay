@@ -7,8 +7,6 @@
 
 #include "Util.h"
 
-#define LED_PIN 32
-#define LED_LENGTH 24
 
 enum class ENeoPixelMQEvent {
     UPDATE_MODE = 0,
