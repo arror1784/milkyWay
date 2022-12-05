@@ -2,9 +2,13 @@
 #define MILKYWAY_SDUTIL_H
 
 #include <WString.h>
+#include <SD.h>
+#include <FS.h>
+#include <HTTPClient.h>
 
 #include "Singleton.h"
-#include <FS.h>
+#include "Util.h"
+
 class SDUtil : public Singleton<SDUtil>{
 
 public:

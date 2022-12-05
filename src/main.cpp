@@ -187,7 +187,7 @@ void processHumanDetection(const JsonObject &data) {
                     dataS->enable = true;
                     break;
                 case EInteractionMode::Synchronization :
-                    dataN->enable = false;
+                    dataN->enable = true;
                     dataA->enable = true;
                     break;
                 default:

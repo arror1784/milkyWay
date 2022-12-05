@@ -64,6 +64,7 @@ void NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
 
 // 현재 조명효과를 모드를 기반으로 바꾼다.
 void NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
+
     switch (mode) {
         case ELightMode::Breathing:
             _currentLightEffect = _breathingLightEffect.id == 0
@@ -101,7 +102,6 @@ void NeoPixelTask::task() {
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
-                Serial.println("msg->enable" + String(msg->enable));
                 _isShuffle = msg->isShuffle;
                 if (_isShuffle) {
                     _count = _oneCycleCount;
@@ -203,10 +203,10 @@ void NeoPixelTask::finishCycle() {
         }
     }
     else if (_isShuffle) {
-        if (_count > 0) {
+        if (_count > 1) {
             _count -= 1;
         }
-        else if (_count == 0) {
+        else if (_count == 1) {
             auto dataS = new ShuffleMsgData();
 
             dataS->enable = true;
