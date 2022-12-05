@@ -106,6 +106,7 @@ void NeoPixelTask::task() {
                 if (_isShuffle) {
                     _count = _oneCycleCount;
                 }
+                setCurrentLightEffect(_mode);
                 refreshColorSet();
                 refreshSpeed();
                 refreshNextTick();
@@ -160,7 +161,7 @@ bool NeoPixelTask::breath() {
     }
     else if (brightness == 0) {
         _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-        if (_mode == ELightMode::ColorChange) {
+        if (_currentLightEffect->mode == ELightMode::ColorChange) {
             refreshColorSet();
         }
         refreshSpeed();
