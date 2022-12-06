@@ -28,6 +28,8 @@ AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 WebSocketClient wsClient;
 WebServer webServer(80);
 
+bool isConnectToWifiWithAPI = false;
+
 void processUserMode(const JsonObject &data) {
     auto *dataN = new NeoPixelMsgData();
     dataN->lightEffect = LightEffect();
@@ -90,7 +92,6 @@ void processUserMode(const JsonObject &data) {
     }
 
     UserModeControl::getInstance().interactionMode = newInteractionMode;
-    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 }
 
 void processPlayList(const JsonObject &data) {
@@ -234,24 +235,22 @@ bool connectWifi() {
 
         if (status != "WL_CONNECTED") {
             Serial.println("wifi connect fail");
-            WifiModule::getInstance().start();
             return false;
         }
 
         Serial.println("wifi connect");
-        WifiModule::getInstance().stop();
-        wsClient.connect();
         return true;
     }
     else {
-        WifiModule::getInstance().start();
         return false;
     }
 }
 
 void receiveWifi() {
+    isConnectToWifiWithAPI = true;
     if (!webServer.hasArg("plain")) {
         webServer.send(400, "text/plain", "no plainBody");
+        isConnectToWifiWithAPI = false;
         return;
     }
     String plainBody = webServer.arg("plain");
@@ -268,15 +267,33 @@ void receiveWifi() {
         Serial.println(EepromControl::getInstance().getWifiSsid());
         Serial.println(EepromControl::getInstance().getWifiPsk());
 
-        bool status = connectWifi();
+        bool status = false;
+
+        for (int i = 0; i < 3; i++) {
+            if (connectWifi() == true) {
+                status = true;
+                break;
+            }
+        }
 
         if (!status) {
+            isConnectToWifiWithAPI = false;
+
             webServer.send(400, "text/plain", "network connect fail");
             return;
         }
+
+        isConnectToWifiWithAPI = false;
         webServer.send(200);
+
+        delay(5000);
+
+        WifiModule::getInstance().stop();
+        wsClient.connect();
     }
     else {
+        isConnectToWifiWithAPI = false;
+
         webServer.send(400, "text/plain", "wrong json data");
     }
 }
@@ -399,7 +416,7 @@ void loop() {
     webServer.handleClient();
     wsClient.loop();
 
-    if (WifiModule::getInstance().isConnectedST()) {
+    if (WifiModule::getInstance().isConnectedST() && !isConnectToWifiWithAPI) {
         AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
         if (msg != nullptr) {
             AudioTask::getInstance().setIsDownloading(true);
@@ -422,6 +439,13 @@ void loop() {
         }
     }
     else {
-        connectWifi();
+        if (connectWifi()) {
+            delay(1000);
+            WifiModule::getInstance().stop();
+            wsClient.connect();
+        }
+        else {
+            WifiModule::getInstance().start();
+        }
     }
 }
