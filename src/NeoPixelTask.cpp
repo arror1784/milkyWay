@@ -1,7 +1,7 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(5),
-                               _msgQueue(5) {
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(30),
+                               _msgQueue(30) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},

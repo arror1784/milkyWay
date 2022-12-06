@@ -7,7 +7,7 @@ WebSocketClient::WebSocketClient() {
                 if (_webSockectReceiveError.has_value()) _webSockectReceiveError.value()(payload, length);
                 return;
             case WStype_DISCONNECTED:
-                if (_webSockectReceiveDisconnected.has_value()) _webSockectReceiveDisconnected.value()(payload, length);
+                if (_webSockectReceiveDisconnected.has_value())_webSockectReceiveDisconnected.value()(payload, length);
                 return;
             case WStype_CONNECTED:
                 if (_webSockectReceiveConnected.has_value()) _webSockectReceiveConnected.value()(payload, length);
@@ -32,6 +32,10 @@ void WebSocketClient::connect() {
     else {
         _client.begin(_host.c_str(), _port, "/socket");
     }
+}
+
+void WebSocketClient::disconnect() {
+    _client.disconnect();
 }
 
 void WebSocketClient::loop() {

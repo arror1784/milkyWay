@@ -15,13 +15,13 @@
 #include "NeoPixelTask.h"
 #include "AudioTask.h"
 
-static const String host = "192.168.0.195";
-static const int port = 6001;
-static const bool ssl = false;
+//static const String host = "192.168.0.195";
+//static const int port = 6001;
+//static const bool ssl = false;
 
-//static const String host = "kira-api.wimcorp.dev";
-//static const int port = 443;
-//static const bool ssl = true;
+static const String host = "kira-api.wimcorp.dev";
+static const int port = 443;
+static const bool ssl = true;
 
 AudioDownloadMsgQueue audioDownloadMsgQueue(5);
 
@@ -224,13 +224,13 @@ bool connectWifi() {
     auto ssid = EepromControl::getInstance().getWifiSsid();
     auto psk = EepromControl::getInstance().getWifiPsk();
 
-    Serial.print("ssid : ");
-    Serial.println(ssid);
-    Serial.print("password : ");
-    Serial.println(psk);
-
     if (ssid.length() != 0) {
         String status = WifiModule::getInstance().connectWifi(ssid, psk);
+
+        Serial.print("ssid : ");
+        Serial.println(ssid);
+        Serial.print("password : ");
+        Serial.println(psk);
 
         if (status != "WL_CONNECTED") {
             Serial.println("wifi connect fail");
@@ -393,7 +393,6 @@ void setup() {
         while (1) { AudioTask::getInstance().task(); }
         vTaskDelete(nullptr);
     }, "audioTask", 10000, nullptr, 1, nullptr, 1);
-    connectWifi();
 }
 
 void loop() {

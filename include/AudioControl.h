@@ -44,7 +44,6 @@ public:
 private:
     Audio _audio;
 
-    int _volume = 10;
     int _listIndex = 1;
 
     bool _isResume = true;

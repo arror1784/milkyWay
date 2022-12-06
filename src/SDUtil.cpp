@@ -14,8 +14,6 @@ void SDUtil::init() {
 
 bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     String parsedFileName = String(filename);
-    parsedFileName.replace(" ", "%20");
-
     String url = api + Util::decodeUrl(parsedFileName);
 
     Serial.println(url);

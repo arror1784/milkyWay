@@ -1,6 +1,6 @@
 #include "ShuffleTask.h"
 
-ShuffleTask::ShuffleTask() : _msgQueue(5) {
+ShuffleTask::ShuffleTask() : _msgQueue(30) {
 
 }
 

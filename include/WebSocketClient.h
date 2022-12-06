@@ -18,6 +18,8 @@ public:
 
     void connect();
 
+    void disconnect();
+
     void loop();
 
     bool isConnected();
@@ -92,7 +94,6 @@ private:
     std::optional<webSocketReceiveCB> _webSockectReceiveConnected;
     std::optional<webSocketReceiveCB> _webSockectReceiveDisconnected;
     std::optional<webSocketReceiveCB> _webSockectReceiveError;
-
 };
 
 

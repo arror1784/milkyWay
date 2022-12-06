@@ -8,9 +8,7 @@ AudioControl::AudioControl(int lrcPin, int blckPin, int doutPin)
 }
 
 void AudioControl::setVolume(uint8_t volume) {
-    _volume = volume;
     _audio.setVolume(volume);
-
 }
 
 void AudioControl::setPlayList(Playlist &list) {
@@ -43,8 +41,9 @@ void AudioControl::playNext() {
     if (_playList.sounds.empty()) return;
 
     if (_playList.isShuffle) {
-        _listIndex = random(_playList.sounds.size());
-    } else {
+        _listIndex = random((long) _playList.sounds.size());
+    }
+    else {
         _listIndex++;
         if (_listIndex >= _playList.sounds.size()) _listIndex = 0;
     }

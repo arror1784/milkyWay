@@ -36,8 +36,12 @@ bool NeoPixel::isOn() const {
 }
 
 void NeoPixel::updatePixelColor() {
-    for (int i = 0; i < ledCount_; i++) {
+    for (int i = 0; i < _colorSet.colors.size(); i++) {
         _strip.setPixelColor(i, _colorSet.colors[i]);
+    }
+
+    for (int i = (int) _colorSet.colors.size(); i < ledCount_; i++) {
+        _strip.setPixelColor(i, _colorSet.colors[_colorSet.colors.size() - 1]);
     }
 }
 

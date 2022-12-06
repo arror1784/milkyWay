@@ -1,6 +1,6 @@
 #include "AudioTask.h"
 
-AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(5), _shuffleMsgQueue(5) {
+AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30), _shuffleMsgQueue(30) {
     _audioControl.setVolume(_volume);
 }
 
