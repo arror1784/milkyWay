@@ -9,7 +9,7 @@
 #include "Util.h"
 
 #define LED_PIN 32
-#define LED_LENGTH 24
+#define LED_LENGTH 50
 
 class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
