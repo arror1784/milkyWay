@@ -211,6 +211,17 @@ void processSendSound(const JsonObject &data) {
     audioDownloadMsgQueue.send(audioDownloadMsg);
 }
 
+void processSendUnplayableSound(const JsonArray &data) {
+    for(auto jsonSound : data) {
+        auto *audioDownloadMsg = new AudioDownloadMsgData();
+
+        audioDownloadMsg->id = jsonSound["id"];
+        audioDownloadMsg->filename = String(jsonSound["filename"]);
+
+        audioDownloadMsgQueue.send(audioDownloadMsg);
+    }
+}
+
 void processPing() {
     wsClient.sendPong();
 }
@@ -382,6 +393,9 @@ void setup() {
         }
         else if (doc["event"] == "SendHumanDetection") {
             processHumanDetection(doc["data"]);
+        }
+        else if (doc["event"] == "SendUnplayableSounds") {
+            processSendUnplayableSound(doc["data"]);
         }
     });
     wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
