@@ -212,13 +212,7 @@ void processSendSound(const JsonObject &data) {
 }
 
 void processPing() {
-    DynamicJsonDocument json(512);
-    json["event"] = "Pong";
-
-    String strJson;
-    serializeJson(json, strJson);
-
-    wsClient.sendText(strJson);
+    wsClient.sendPong();
 }
 
 bool connectWifi() {
@@ -389,9 +383,9 @@ void setup() {
         else if (doc["event"] == "SendHumanDetection") {
             processHumanDetection(doc["data"]);
         }
-        else if (doc["event"] == "Ping") {
-            processPing();
-        }
+    });
+    wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
+        processPing();
     });
     wsClient.onErrorReceived([&](uint8_t *payload, size_t length) {
         Serial.println(String(payload, length));

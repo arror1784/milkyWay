@@ -32,11 +32,13 @@ public:
 
     void sendText(String txt);
 
+    void sendPong();
+
     typedef std::function<void(uint8_t *, size_t)> webSocketReceiveCB;
 
     void onTextMessageReceived(webSocketReceiveCB cb) { _webSocketReceiveText = cb; };
 
-    void onBinaryMessageReceived(webSocketReceiveCB cb) { _webSocketReceiveBinary = cb; };
+    void onPingMessageReceived(webSocketReceiveCB cb) { _webSocketReceivePing = cb; };
 
     void onConnected(webSocketReceiveCB cb) { _webSocketReceiveConnected = cb; };
 
@@ -90,7 +92,7 @@ private:
     WebSocketsClient _client;
 
     std::optional<webSocketReceiveCB> _webSocketReceiveText;
-    std::optional<webSocketReceiveCB> _webSocketReceiveBinary;
+    std::optional<webSocketReceiveCB> _webSocketReceivePing;
     std::optional<webSocketReceiveCB> _webSocketReceiveConnected;
     std::optional<webSocketReceiveCB> _webSocketReceiveDisconnected;
     std::optional<webSocketReceiveCB> _webSocketReceiveError;

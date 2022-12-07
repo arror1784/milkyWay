@@ -7,18 +7,16 @@ WebSocketClient::WebSocketClient() {
                 if (_webSocketReceiveError.has_value()) _webSocketReceiveError.value()(payload, length);
                 return;
             case WStype_DISCONNECTED:
-                _client.disableHeartbeat();
                 if (_webSocketReceiveDisconnected.has_value())_webSocketReceiveDisconnected.value()(payload, length);
                 return;
             case WStype_CONNECTED:
-                _client.enableHeartbeat(1000, 10000, 5);
                 if (_webSocketReceiveConnected.has_value()) _webSocketReceiveConnected.value()(payload, length);
                 return;
             case WStype_TEXT:
                 if (_webSocketReceiveText.has_value()) _webSocketReceiveText.value()(payload, length);
                 return;
-            case WStype_BIN:
-                if (_webSocketReceiveBinary.has_value()) _webSocketReceiveBinary.value()(payload, length);
+            case WStype_PING:
+                if (_webSocketReceivePing.has_value()) _webSocketReceivePing.value()(payload, length);
                 return;
             default:
                 return;
@@ -62,4 +60,8 @@ void WebSocketClient::setWithSsl(bool withSsl) {
 
 void WebSocketClient::sendText(String txt) {
     _client.sendTXT(txt.c_str());
+}
+
+void WebSocketClient::sendPong() {
+    _client.sendPing();
 }

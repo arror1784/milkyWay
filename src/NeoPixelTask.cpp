@@ -264,8 +264,6 @@ void NeoPixelTask::refreshSpeed() {
         default:
             break;
     }
-    Serial.println("_currentLightEffect->mode" + String((int) _currentLightEffect->mode));
-    Serial.println("_speed" + String(_speed));
 }
 
 // 현재 스피드를 기반으로 다음 틱 시간을 설정한다.
