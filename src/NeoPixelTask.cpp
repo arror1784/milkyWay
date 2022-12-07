@@ -128,6 +128,7 @@ void NeoPixelTask::task() {
             }
             else {
                 reset();
+                _nextTick = 0xFFFFFFFF;
             }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {

@@ -99,7 +99,18 @@ void processUserMode(const JsonObject &data) {
     }
 
     UserModeControl::getInstance().interactionMode = newInteractionMode;
-    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
+
+    EOperationMode newOperationMode = Util::stringToEOperationMode(data["operationMode"]);
+
+    if (
+        (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionA &&
+         newOperationMode == EOperationMode::HumanDetectionB)
+        || (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB &&
+            newOperationMode == EOperationMode::HumanDetectionA)) {
+        UserModeControl::getInstance().humanDetection = !UserModeControl::getInstance().humanDetection;
+    }
+
+    UserModeControl::getInstance().operationMode = newOperationMode;
 }
 
 void processPlayList(const JsonObject &data) {
@@ -159,8 +170,6 @@ void processLightEffects(const JsonArray &array) {
 }
 
 void processHumanDetection(const JsonObject &data) {
-    Serial.println(String("UserModeControl::getInstance().operationMode") + (int)UserModeControl::getInstance().operationMode);
-
     if (UserModeControl::getInstance().operationMode != EOperationMode::Default) {
         if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
             UserModeControl::getInstance().humanDetection = !data["isDetected"];
@@ -169,11 +178,26 @@ void processHumanDetection(const JsonObject &data) {
             UserModeControl::getInstance().humanDetection = data["isDetected"];
         }
 
-        if(UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
+        if (UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
             auto *dataS = new ShuffleMsgData();
             dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
             dataS->enable = false;
             dataS->enable = UserModeControl::getInstance().humanDetection;
+
+            if (!UserModeControl::getInstance().humanDetection) {
+                auto *dataA = new AudioMsgData();
+                dataA->list = Playlist();
+                dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+                dataA->enable = false;
+
+                auto *dataN = new NeoPixelMsgData();
+                dataN->lightEffect = LightEffect();
+                dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+                dataN->mode = ELightMode::None;
+                dataN->enable = false;
+                AudioTask::getInstance().sendMsg(dataA);
+                NeoPixelTask::getInstance().sendMsg(dataN);
+            }
 
             ShuffleTask::getInstance().sendMsg(dataS);
 
@@ -481,7 +505,8 @@ void loop() {
 
                     delete msg;
                 }
-            } else if (msg->event == EAudioFileEvent::DELETE) {
+            }
+            else if (msg->event == EAudioFileEvent::DELETE) {
                 AudioTask::getInstance().setIsSDAccessing(true);
                 bool status = SDUtil::deleteFile(msg->filename);
 

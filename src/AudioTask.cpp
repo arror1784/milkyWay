@@ -38,6 +38,7 @@ void AudioTask::task() {
             }
             else {
                 _audioControl.pause();
+                _nextTick = 0xFFFFFFFF;
             }
         }
 
@@ -45,7 +46,8 @@ void AudioTask::task() {
     }
     _audioControl.loop();
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
+    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization
+        && _audioControl.isPlaying()) {
         if (_syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - _tick)) {
             auto gain = std::abs(_audioControl.getLastGain()) / _volume;
 
