@@ -10,7 +10,7 @@
 #include "NeoPixel.h"
 #include "EepromControl.h"
 
-#include "AudioDownloadMsgQueue.h"
+#include "AudioFileMsgQueue.h"
 #include "ShuffleTask.h"
 #include "NeoPixelTask.h"
 #include "AudioTask.h"
@@ -23,7 +23,7 @@ static const String host = "kira-api.wimcorp.dev";
 static const int port = 443;
 static const bool ssl = true;
 
-AudioDownloadMsgQueue audioDownloadMsgQueue(5);
+AudioFileMsgQueue audioFileMsgQueue(20);
 
 WebSocketClient wsClient;
 WebServer webServer(80);
@@ -38,6 +38,13 @@ void processUserMode(const JsonObject &data) {
 
     NeoPixelTask::getInstance().sendMsg(dataN);
 
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = EAudioMQEvent::UPDATE_VOLUME;
+    dataA->volume = data["volume"];
+
+    AudioTask::getInstance().sendMsg(dataA);
+
     EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
 
     if (newInteractionMode == EInteractionMode::Shuffle) {
@@ -48,7 +55,7 @@ void processUserMode(const JsonObject &data) {
         ShuffleTask::getInstance().sendMsg(dataS);
     }
     else {
-        auto *dataA = new AudioMsgData();
+        dataA = new AudioMsgData();
         dataA->list = Playlist();
         dataA->events = EAudioMQEvent::UPDATE_ENABLE;
         dataA->enable = false;
@@ -203,23 +210,40 @@ void processHumanDetection(const JsonObject &data) {
 }
 
 void processSendSound(const JsonObject &data) {
-    auto *audioDownloadMsg = new AudioDownloadMsgData();
+    auto *audioFileMsg = new AudioFileMsgData();
 
-    audioDownloadMsg->id = data["id"];
-    audioDownloadMsg->filename = String(data["filename"]);
+    audioFileMsg->event = EAudioFileEvent::DOWNLOAD;
+    audioFileMsg->id = data["id"];
+    audioFileMsg->filename = String(data["filename"]);
 
-    audioDownloadMsgQueue.send(audioDownloadMsg);
+    audioFileMsgQueue.send(audioFileMsg);
 }
 
-void processSendUnplayableSound(const JsonArray &data) {
-    for(auto jsonSound : data) {
-        auto *audioDownloadMsg = new AudioDownloadMsgData();
+void processSendUnplayableSounds(const JsonArray &data) {
+    for (auto jsonSound: data) {
+        auto *audioDownloadMsg = new AudioFileMsgData();
 
         audioDownloadMsg->id = jsonSound["id"];
         audioDownloadMsg->filename = String(jsonSound["filename"]);
 
-        audioDownloadMsgQueue.send(audioDownloadMsg);
+        audioFileMsgQueue.send(audioDownloadMsg);
     }
+}
+
+void processSendDeletedSound(const JsonObject &data) {
+    auto *audioFileMsg = new AudioFileMsgData();
+
+    audioFileMsg->event = EAudioFileEvent::DELETE;
+    audioFileMsg->id = data["id"];
+    audioFileMsg->filename = String(data["filename"]);
+
+    audioFileMsgQueue.send(audioFileMsg);
+}
+
+void processReset() {
+    EepromControl::getInstance().setWifiPsk("", "");
+    WifiModule::getInstance().disconnectWifi();
+    WifiModule::getInstance().start();
 }
 
 void processPing() {
@@ -395,7 +419,13 @@ void setup() {
             processHumanDetection(doc["data"]);
         }
         else if (doc["event"] == "SendUnplayableSounds") {
-            processSendUnplayableSound(doc["data"]);
+            processSendUnplayableSounds(doc["data"]);
+        }
+        else if (doc["event"] == "SendDeletedSound") {
+            processSendDeletedSound(doc["data"]);
+        }
+        else if (doc["event"] == "Reset") {
+            processReset();
         }
     });
     wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
@@ -425,24 +455,38 @@ void loop() {
     wsClient.loop();
 
     if (WifiModule::getInstance().isConnectedST() && !isConnectToWifiWithAPI) {
-        AudioDownloadMsgData *msg = audioDownloadMsgQueue.recv();
+        AudioFileMsgData *msg = audioFileMsgQueue.recv();
         if (msg != nullptr) {
-            AudioTask::getInstance().setIsDownloading(true);
+            AudioTask::getInstance().setIsSDAccessing(true);
+            if (msg->event == EAudioFileEvent::DOWNLOAD) {
 
-            String protocol = ssl ? "https://" : "http://";
-            int id = msg->id;
-            String filename = msg->filename;
-            String url = protocol + host + ":" + port + "/api/sound/file/";
+                String protocol = ssl ? "https://" : "http://";
+                int id = msg->id;
+                String filename = msg->filename;
+                String url = protocol + host + ":" + port + "/api/sound/file/";
 
-            bool status = SDUtil::downloadFile(url, id, filename);
+                bool status = SDUtil::downloadFile(url, id, filename);
 
-            if (!status) {
-                audioDownloadMsgQueue.send(msg);
-            }
-            else {
-                AudioTask::getInstance().setIsDownloading(false);
+                if (!status) {
+                    audioFileMsgQueue.send(msg);
+                }
+                else {
+                    AudioTask::getInstance().setIsSDAccessing(false);
 
-                delete msg;
+                    delete msg;
+                }
+            } else if (msg->event == EAudioFileEvent::DELETE) {
+                AudioTask::getInstance().setIsSDAccessing(true);
+                bool status = SDUtil::deleteFile(msg->filename);
+
+                if (!status) {
+                    audioFileMsgQueue.send(msg);
+                }
+                else {
+                    AudioTask::getInstance().setIsSDAccessing(false);
+
+                    delete msg;
+                }
             }
         }
     }

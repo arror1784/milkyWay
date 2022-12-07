@@ -23,7 +23,7 @@ public:
 
     ShuffleMsgData *getShuffleMsg();
 
-    void setIsDownloading(bool isDownloading);
+    void setIsSDAccessing(bool isDownloading);
 
 private:
     void setNextTick(unsigned long tick);

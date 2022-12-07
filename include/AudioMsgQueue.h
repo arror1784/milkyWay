@@ -6,7 +6,8 @@
 
 enum class EAudioMQEvent {
     UPDATE_ENABLE = 0,
-    UPDATE_PLAYLIST = 1
+    UPDATE_PLAYLIST = 1,
+    UPDATE_VOLUME = 2
 };
 
 class AudioMsgData {
@@ -15,6 +16,7 @@ public:
     EAudioMQEvent events;
     bool enable = true;
     bool isShuffle = false;
+    int volume = 0;
 };
 
 class AudioMsgQueue : public MsgQueue<AudioMsgData> {

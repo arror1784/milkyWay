@@ -63,9 +63,9 @@ bool AudioControl::isPlaying() {
 }
 
 bool AudioControl::isDownloading() {
-    return _isDownloading;
+    return _isSDAccessing;
 }
 
-void AudioControl::setIsDownloading(bool isDownloading) {
-    _isDownloading = isDownloading;
+void AudioControl::setIsSDAccessing(bool isSDAccessing) {
+    _isSDAccessing = isSDAccessing;
 }
