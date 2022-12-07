@@ -17,7 +17,6 @@ public:
 };
 
 class AudioControl {
-
 public:
     AudioControl(int lrcPin, int blckPin, int doutPin);
 
@@ -29,7 +28,9 @@ public:
 
     void resume();
 
-    void playNext();
+    void updatePlaylistIndex();
+
+    void play();
 
     void loop();
 
@@ -42,6 +43,9 @@ public:
     void setIsSDAccessing(bool isDownloading);
 
 private:
+
+    bool isValidPlaylist();
+
     Audio _audio;
 
     int _listIndex = 1;

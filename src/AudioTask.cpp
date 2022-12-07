@@ -96,7 +96,7 @@ void AudioTask::setNextTick(unsigned long tick) {
 }
 
 void AudioTask::playNext() {
-    _audioControl.playNext();
+    _audioControl.play();
 }
 
 void audio_info(const char *info) {

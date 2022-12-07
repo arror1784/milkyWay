@@ -36,7 +36,8 @@ void AudioControl::setPlayList(Playlist &list) {
     _listIndex = 0;
 
     _audio.stopSong();
-    playNext();
+    updatePlaylistIndex();
+    play();
 
     if (!_isResume) {
         _audio.pauseResume();
@@ -44,6 +45,7 @@ void AudioControl::setPlayList(Playlist &list) {
 }
 
 void AudioControl::pause() {
+    if (!isValidPlaylist()) return;
     if (_isResume) {
         _isResume = false;
         _audio.pauseResume();
@@ -51,15 +53,14 @@ void AudioControl::pause() {
 }
 
 void AudioControl::resume() {
+    if (!isValidPlaylist()) return;
     if (!_isResume) {
         _isResume = true;
         _audio.pauseResume();
     }
 };
 
-void AudioControl::playNext() {
-    if (_playList.sounds.empty()) return;
-
+void AudioControl::updatePlaylistIndex() {
     if (_playList.isShuffle) {
         _listIndex = random((long) _playList.sounds.size());
     }
@@ -67,6 +68,10 @@ void AudioControl::playNext() {
         _listIndex++;
         if (_listIndex >= _playList.sounds.size()) _listIndex = 0;
     }
+}
+
+void AudioControl::play() {
+    if (!isValidPlaylist()) return;
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
 }
 
@@ -88,4 +93,8 @@ bool AudioControl::isDownloading() {
 
 void AudioControl::setIsSDAccessing(bool isSDAccessing) {
     _isSDAccessing = isSDAccessing;
+}
+
+bool AudioControl::isValidPlaylist() {
+    return !_playList.sounds.empty();
 }
