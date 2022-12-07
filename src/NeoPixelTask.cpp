@@ -139,6 +139,7 @@ void NeoPixelTask::task() {
             _isSyncMode = msg->enable;
             _sync = msg->sync;
         }
+        delete msg;
     }
 
     if (millis() >= _nextTick) {
@@ -263,9 +264,9 @@ void NeoPixelTask::refreshColorSet() {
 // 현재 조명효과의 모드에 따른 스피드를 넣는다.
 void NeoPixelTask::refreshSpeed() {
     switch (_currentLightEffect->mode) {
+        // blinking은 무조건 랜덤
         case ELightMode::Blinking:
-            _speed = _currentLightEffect->isRandomSpeed
-                     ? _blinkingSpeeds[random(_blinkingSpeeds.size())] : _currentLightEffect->speed;
+            _speed = _blinkingSpeeds[random(_blinkingSpeeds.size())];
             break;
         case ELightMode::Breathing:
         case ELightMode::ColorChange:
