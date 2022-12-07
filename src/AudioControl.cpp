@@ -36,6 +36,9 @@ void AudioControl::setPlayList(Playlist &list) {
     _listIndex = 0;
 
     _audio.stopSong();
+
+    if(_playList.sounds.empty()) return;
+
     playNext();
 
     if (!_isResume) {
