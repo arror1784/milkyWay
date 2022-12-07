@@ -99,6 +99,7 @@ void processUserMode(const JsonObject &data) {
     }
 
     UserModeControl::getInstance().interactionMode = newInteractionMode;
+    UserModeControl::getInstance().operationMode = Util::stringToEOperationMode(data["operationMode"]);
 }
 
 void processPlayList(const JsonObject &data) {
@@ -158,12 +159,25 @@ void processLightEffects(const JsonArray &array) {
 }
 
 void processHumanDetection(const JsonObject &data) {
+    Serial.println(String("UserModeControl::getInstance().operationMode") + (int)UserModeControl::getInstance().operationMode);
+
     if (UserModeControl::getInstance().operationMode != EOperationMode::Default) {
         if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
             UserModeControl::getInstance().humanDetection = !data["isDetected"];
         }
         else {
             UserModeControl::getInstance().humanDetection = data["isDetected"];
+        }
+
+        if(UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
+            auto *dataS = new ShuffleMsgData();
+            dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
+            dataS->enable = false;
+            dataS->enable = UserModeControl::getInstance().humanDetection;
+
+            ShuffleTask::getInstance().sendMsg(dataS);
+
+            return;
         }
 
         auto *dataA = new AudioMsgData();
@@ -177,10 +191,6 @@ void processHumanDetection(const JsonObject &data) {
         dataN->mode = ELightMode::None;
         dataN->enable = false;
 
-        auto *dataS = new ShuffleMsgData();
-        dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
-        dataS->enable = false;
-
         if (UserModeControl::getInstance().humanDetection) {
             switch (UserModeControl::getInstance().interactionMode) {
                 case EInteractionMode::LightOnly :
@@ -190,9 +200,6 @@ void processHumanDetection(const JsonObject &data) {
                 case EInteractionMode::SoundOnly :
                     dataN->enable = false;
                     dataA->enable = true;
-                    break;
-                case EInteractionMode::Shuffle :
-                    dataS->enable = true;
                     break;
                 case EInteractionMode::Synchronization :
                     dataN->enable = true;
@@ -205,7 +212,6 @@ void processHumanDetection(const JsonObject &data) {
 
         AudioTask::getInstance().sendMsg(dataA);
         NeoPixelTask::getInstance().sendMsg(dataN);
-        ShuffleTask::getInstance().sendMsg(dataS);
     }
 }
 
