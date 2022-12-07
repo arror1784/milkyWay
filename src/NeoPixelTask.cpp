@@ -1,7 +1,7 @@
 #include "NeoPixelTask.h"
 
 NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(30),
-                               _msgQueue(30) {
+                               _msgQueue(10), _syncMsgQueue(10) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},
@@ -56,6 +56,10 @@ void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
     _msgQueue.send(dataN);
 }
 
+void NeoPixelTask::sendSyncMsg(NeoPixelMsgData *dataN) {
+    _syncMsgQueue.send(dataN);
+}
+
 void NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
     ELightMode mode = lightEffect.mode;
 
@@ -105,12 +109,6 @@ void NeoPixelTask::task() {
         else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
             setCurrentLightEffect(msg->mode);
             _mode = msg->mode;
-
-            if (isValidColorSet()) {
-                refreshColorSet();
-                refreshSpeed();
-                refreshNextTick();
-            }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
@@ -131,11 +129,16 @@ void NeoPixelTask::task() {
                 _nextTick = 0xFFFFFFFF;
             }
         }
-        else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
+        delete msg;
+    }
+
+    msg = _syncMsgQueue.recv();
+
+    if (msg != nullptr) {
+        if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
             _isSyncMode = msg->enable;
             _sync = msg->sync;
         }
-        delete msg;
     }
 
     if (millis() >= _nextTick) {

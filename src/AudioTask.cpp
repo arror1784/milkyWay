@@ -69,7 +69,7 @@ void AudioTask::task() {
 
             dataN->sync = total / _gains.size();
 
-            NeoPixelTask::getInstance().sendMsg(dataN);
+            NeoPixelTask::getInstance().sendSyncMsg(dataN);
         }
     }
 

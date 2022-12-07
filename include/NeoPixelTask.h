@@ -19,6 +19,8 @@ public:
 
     void sendMsg(NeoPixelMsgData *dataN);
 
+    void sendSyncMsg(NeoPixelMsgData *dataN);
+
     void updateCustomLightEffect(const LightEffect &lightEffect);
 
     void setCurrentLightEffect(ELightMode mode);
@@ -63,6 +65,7 @@ private:
     int _count = -1;
 
     NeoPixelMsgQueue _msgQueue;
+    NeoPixelMsgQueue _syncMsgQueue;
     ShuffleMsgQueue _shuffleMsgQueue;
 
     LightEffect *_currentLightEffect;
