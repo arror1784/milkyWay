@@ -23,7 +23,7 @@ static const String host = "kira-api.wimcorp.dev";
 static const int port = 443;
 static const bool ssl = true;
 
-AudioDownloadMsgQueue audioDownloadMsgQueue(5);
+AudioDownloadMsgQueue audioDownloadMsgQueue(20);
 
 WebSocketClient wsClient;
 WebServer webServer(80);

@@ -12,8 +12,9 @@ void ShuffleTask::task() {
     ShuffleMsgData *dataS = _msgQueue.recv();
 
     if (dataS != nullptr) {
-        if (dataS->events == EShuffleSMQEvent::UPDATE_ENABLE) {
-            if (dataS->enable) {
+        if (dataS->events == EShuffleSMQEvent::UPDATE_ENABLE && _isEnabled != dataS->enable) {
+            _isEnabled = dataS->enable;
+            if (_isEnabled) {
                 auto *dataA = new AudioMsgData();
                 dataA->isShuffle = true;
                 AudioTask::getInstance().sendMsg(dataA);

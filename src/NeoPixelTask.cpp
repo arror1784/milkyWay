@@ -64,7 +64,6 @@ void NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
 
 // 현재 조명효과를 모드를 기반으로 바꾼다.
 void NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
-
     switch (mode) {
         case ELightMode::Breathing:
             _currentLightEffect = _breathingLightEffect.id == 0
@@ -100,29 +99,35 @@ void NeoPixelTask::task() {
         if (msg->events == ENeoPixelMQEvent::UPDATE_EFFECT) {
             updateCustomLightEffect(msg->lightEffect);
         }
-        else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
+        else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE && _mode == msg->mode) {
             setCurrentLightEffect(msg->mode);
             _mode = msg->mode;
-            refreshColorSet();
-            refreshSpeed();
-            refreshNextTick();
+
+            if (!_currentLightEffect->colorSets.empty()) {
+                refreshColorSet();
+                refreshSpeed();
+                refreshNextTick();
+            }
         }
-        else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
-            if (msg->enable) {
+        else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE && _isEnabled != msg->enable) {
+            _isEnabled = msg->enable;
+            if (_isEnabled) {
                 _isShuffle = msg->isShuffle;
                 if (_isShuffle) {
                     _count = _oneCycleCount;
                 }
                 setCurrentLightEffect(_mode);
-                refreshColorSet();
-                refreshSpeed();
-                refreshNextTick();
+                if (!_currentLightEffect->colorSets.empty()) {
+                    refreshColorSet();
+                    refreshSpeed();
+                    refreshNextTick();
+                }
             }
             else {
                 reset();
             }
         }
-        else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
+        else if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC && _isSyncMode != msg->enable) {
             _isSyncMode = msg->enable;
             _sync = msg->sync;
         }

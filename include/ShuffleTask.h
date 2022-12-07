@@ -17,6 +17,7 @@ public:
 private:
     unsigned long _nextTick = 0xFFFFFFFF;
     bool _isNextSound = true;
+    bool _isEnabled = false;
 
     ShuffleMsgQueue _msgQueue;
 

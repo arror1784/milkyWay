@@ -28,6 +28,7 @@ public:
 private:
     void setNextTick(unsigned long tick);
 
+    bool _isEnabled = false;
     int _volume = 10;  // 0...21
     std::vector<int> _gains;
     TickType_t _tick = xTaskGetTickCount();

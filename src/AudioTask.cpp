@@ -21,8 +21,9 @@ void AudioTask::task() {
             auto &list = msg->list;
             _audioControl.setPlayList(list);
         }
-        else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
-            if (msg->enable) {
+        else if (msg->events == EAudioMQEvent::UPDATE_ENABLE && _isEnabled != msg->enable) {
+            _isEnabled = msg->enable;
+            if (_isEnabled) {
                 _audioControl.resume();
                 _isShuffle = msg->isShuffle;
 
