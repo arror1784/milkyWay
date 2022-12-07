@@ -79,9 +79,16 @@ void NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
                                   ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
             break;
         default:
-            // TODO : Mixed일 때 랜덤으로 골라지는 조명 효과 중복 체크 넣어야 함
-            auto randomValue = random(3);
-            setCurrentLightEffect((ELightMode) randomValue);
+            if (_lightEffectIndexes.empty()) {
+                for (int i = 0; i < _lightEffectModeCount; i++) {
+                    _lightEffectIndexes.push_back(i);
+                }
+            }
+            long randomValue = random((long) _lightEffectIndexes.size());
+            int randomColorSetIndex = _lightEffectIndexes[randomValue];
+            _lightEffectIndexes.erase(_lightEffectIndexes.begin() + randomValue);
+
+            setCurrentLightEffect((ELightMode) randomColorSetIndex);
             break;
     }
 }
@@ -228,9 +235,16 @@ void NeoPixelTask::reset() {
 }
 
 // 네오픽셀에게 현재 조명효과내에 있는 컬러셋 중 하나로 갱신하여 넘겨준다.
-// TODO : 컬러셋 중복 체크 넣어야 함
 void NeoPixelTask::refreshColorSet() {
-    auto randomColorSetIndex = random((long) _currentLightEffect->colorSets.size());
+    if (_colorIndexes.empty()) {
+        for (int i = 0; i < _currentLightEffect->colorSets.size(); i++) {
+            _colorIndexes.push_back(i);
+        }
+    }
+    long randomValue = random((long) _colorIndexes.size());
+    int randomColorSetIndex = _colorIndexes[randomValue];
+    _colorIndexes.erase(_colorIndexes.begin() + randomValue);
+
     _neoPixel.setColorSet(_currentLightEffect->colorSets[randomColorSetIndex]);
 }
 
@@ -250,6 +264,8 @@ void NeoPixelTask::refreshSpeed() {
         default:
             break;
     }
+    Serial.println("_currentLightEffect->mode" + String((int) _currentLightEffect->mode));
+    Serial.println("_speed" + String(_speed));
 }
 
 // 현재 스피드를 기반으로 다음 틱 시간을 설정한다.

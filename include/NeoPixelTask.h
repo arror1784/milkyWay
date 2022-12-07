@@ -72,6 +72,10 @@ private:
     LightEffect _defaultBlinkingLightEffect;
     LightEffect _defaultColorChangeLightEffect;
 
+    std::vector<int> _colorIndexes;
+    std::vector<int> _lightEffectIndexes;
+    const int _lightEffectModeCount = 3;
+
     const std::vector<unsigned int> _breathingSpeeds{
         1500, 2500, 4000, 5000, 6000, 8000, 10000, 12000, 15000
     };
