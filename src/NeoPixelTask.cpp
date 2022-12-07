@@ -105,9 +105,12 @@ void NeoPixelTask::task() {
         else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
             setCurrentLightEffect(msg->mode);
             _mode = msg->mode;
-            refreshColorSet();
-            refreshSpeed();
-            refreshNextTick();
+
+            if (isValidColorSet()) {
+                refreshColorSet();
+                refreshSpeed();
+                refreshNextTick();
+            }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
@@ -116,9 +119,12 @@ void NeoPixelTask::task() {
                     _count = _oneCycleCount;
                 }
                 setCurrentLightEffect(_mode);
-                refreshColorSet();
-                refreshSpeed();
-                refreshNextTick();
+
+                if (isValidColorSet()) {
+                    refreshColorSet();
+                    refreshSpeed();
+                    refreshNextTick();
+                }
             }
             else {
                 reset();
@@ -271,4 +277,8 @@ void NeoPixelTask::refreshSpeed() {
 // 현재 스피드를 기반으로 다음 틱 시간을 설정한다.
 void NeoPixelTask::refreshNextTick() {
     _nextTick = millis() + _speed;
+}
+
+bool NeoPixelTask::isValidColorSet() {
+    return _currentLightEffect->colorSets.empty();
 }

@@ -46,6 +46,8 @@ private:
 
     void refreshNextTick();
 
+    bool isValidColorSet();
+
     ELightMode _mode = ELightMode::None;
 
     unsigned long _speed = 0;
