@@ -44,6 +44,8 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
         _defaultBlinkingLightEffect.colorSets.push_back(colorSet);
         _defaultColorChangeLightEffect.colorSets.push_back(colorSet);
     }
+
+    _neoPixel.off();
 }
 
 ShuffleMsgData *NeoPixelTask::getShuffleMsg() {
