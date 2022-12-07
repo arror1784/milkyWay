@@ -22,7 +22,10 @@ void AudioTask::task() {
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             auto &list = msg->list;
-            _audioControl.setPlayList(list);
+            bool status = _audioControl.setPlayList(list);
+            if (status) {
+                _audioControl.play();
+            }
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {

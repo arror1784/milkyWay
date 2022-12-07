@@ -11,7 +11,7 @@ void AudioControl::setVolume(uint8_t volume) {
     _audio.setVolume(volume);
 }
 
-void AudioControl::setPlayList(Playlist &list) {
+bool AudioControl::setPlayList(Playlist &list) {
     bool isSamePlaylist = true;
 
     if (list.sounds.size() == _playList.sounds.size()) {
@@ -30,18 +30,11 @@ void AudioControl::setPlayList(Playlist &list) {
         isSamePlaylist = false;
     }
 
-    if (isSamePlaylist) return;
+    if (isSamePlaylist) return false;
 
     _playList = list;
-    _listIndex = 0;
 
-    _audio.stopSong();
-    updatePlaylistIndex();
-    play();
-
-    if (!_isResume) {
-        _audio.pauseResume();
-    }
+    return true;
 }
 
 void AudioControl::pause() {
@@ -72,6 +65,10 @@ void AudioControl::updatePlaylistIndex() {
 
 void AudioControl::play() {
     if (!isValidPlaylist()) return;
+
+    _audio.stopSong();
+    updatePlaylistIndex();
+
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
 }
 

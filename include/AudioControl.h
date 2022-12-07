@@ -22,7 +22,7 @@ public:
 
     void setVolume(uint8_t volume);
 
-    void setPlayList(Playlist &list);
+    bool setPlayList(Playlist &list);
 
     void pause();
 
