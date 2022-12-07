@@ -60,7 +60,7 @@ private:
     Adafruit_NeoPixel _strip;
 
     int16_t pin_ = 32;
-    int ledCount_ = 100;
+    int ledCount_ = 50;
     const uint8_t maxBright_ = 255;
 };
 

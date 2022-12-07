@@ -55,6 +55,7 @@ private:
     bool _isSyncMode = false;
     NeoPixel _neoPixel;
     bool _isShuffle = false;
+    bool _isEnabled = false;
 
     // -1일 경우 무한 반복
     int _count = -1;

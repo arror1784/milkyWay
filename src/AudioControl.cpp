@@ -12,6 +12,26 @@ void AudioControl::setVolume(uint8_t volume) {
 }
 
 void AudioControl::setPlayList(Playlist &list) {
+    bool isSamePlaylist = true;
+
+    if (list.sounds.size() == _playList.sounds.size()) {
+        for (int i = 0; i < list.sounds.size(); i++) {
+            if (_playList.sounds.size() - 1 < i) {
+                isSamePlaylist = false;
+                break;
+            }
+            if (_playList.sounds[i].id != list.sounds[i].id) {
+                isSamePlaylist = false;
+                break;
+            }
+        }
+    }
+    else {
+        isSamePlaylist = false;
+    }
+
+    if (isSamePlaylist) return;
+
     _playList = list;
     _listIndex = 0;
 
