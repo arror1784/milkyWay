@@ -64,3 +64,7 @@ void NeoPixel::setColorSet(const ColorSet &colorSet) {
 void NeoPixel::setBreathingStatus(EBreathingStatus status) {
     _breathingStatus = status;
 }
+
+void NeoPixel::setLedCount(int ledCount) {
+    ledCount_ = ledCount;
+}

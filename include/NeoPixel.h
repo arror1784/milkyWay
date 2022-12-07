@@ -51,6 +51,8 @@ public:
 
     void setBreathingStatus(EBreathingStatus status);
 
+    void setLedCount(int ledCount);
+
 private:
     void updatePixelColor();
 

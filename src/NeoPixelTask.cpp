@@ -34,6 +34,8 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
     DynamicJsonDocument doc = DynamicJsonDocument(fileStr.length() * 2);
     deserializeJson(doc, fileStr);
 
+    _neoPixel.setLedCount(doc["ledCount"]);
+
     for (auto jsonColorSet: JsonArray(doc["colors"])) {
         ColorSet colorSet;
         for (auto jsonColor: JsonArray(jsonColorSet["colors"])) {
