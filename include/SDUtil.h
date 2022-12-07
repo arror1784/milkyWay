@@ -9,23 +9,29 @@
 #include "Singleton.h"
 #include "Util.h"
 
-class SDUtil : public Singleton<SDUtil>{
+class SDUtil : public Singleton<SDUtil> {
 
 public:
-  void init();
+    void init();
 
-  static bool downloadFile(const String &api, int id, const String &filename);
-  static bool writeFile(const String &path,const String &data);
-  static String readFile(const String &path);
-  static bool  exists(const String &path);
-  static void listDir(FS &fs, const char *dirname, uint8_t levels);
+    static bool downloadFile(const String &api, int id, const String &filename);
 
-  static String authenticationToken_;
+    static bool writeFile(const String &path, const String &data);
 
-  static const String defaultColorSetsPath_;
+    static String readFile(const String &path);
+
+    static bool exists(const String &path);
+
+    static bool deleteFile(const String &path);
+
+    static void listDir(FS &fs, const char *dirname, uint8_t levels);
+
+    static String authenticationToken_;
+
+    static const String defaultColorSetsPath_;
 
 private:
-  String _serial;
+    String _serial;
 
 };
 

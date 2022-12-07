@@ -39,7 +39,7 @@ public:
 
     bool isDownloading();
 
-    void setIsDownloading(bool isDownloading);
+    void setIsSDAccessing(bool isDownloading);
 
 private:
     Audio _audio;
@@ -47,7 +47,7 @@ private:
     int _listIndex = 1;
 
     bool _isResume = true;
-    bool _isDownloading = false;
+    bool _isSDAccessing = false;
 
     Playlist _playList;
 

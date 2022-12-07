@@ -100,3 +100,7 @@ bool SDUtil::exists(const String &path) {
     return !!file;
 }
 
+bool SDUtil::deleteFile(const String &path) {
+    return SD.remove("/" + path);
+}
+

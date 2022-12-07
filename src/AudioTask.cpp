@@ -17,7 +17,10 @@ void AudioTask::task() {
         return;
     }
     if (msg != nullptr) {
-        if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
+        if (msg->events == EAudioMQEvent::UPDATE_VOLUME) {
+            _audioControl.setVolume(msg->volume);
+        }
+        else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             auto &list = msg->list;
             _audioControl.setPlayList(list);
         }
@@ -85,8 +88,8 @@ ShuffleMsgData *AudioTask::getShuffleMsg() {
     return _shuffleMsgQueue.recv();
 }
 
-void AudioTask::setIsDownloading(bool isDownloading) {
-    _audioControl.setIsDownloading(isDownloading);
+void AudioTask::setIsSDAccessing(bool isDownloading) {
+    _audioControl.setIsSDAccessing(isDownloading);
 }
 
 void AudioTask::setNextTick(unsigned long tick) {
