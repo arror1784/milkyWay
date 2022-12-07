@@ -280,5 +280,5 @@ void NeoPixelTask::refreshNextTick() {
 }
 
 bool NeoPixelTask::isValidColorSet() {
-    return _currentLightEffect->colorSets.empty();
+    return !_currentLightEffect->colorSets.empty();
 }
