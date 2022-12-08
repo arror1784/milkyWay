@@ -19,6 +19,7 @@ void AudioTask::task() {
     if (msg != nullptr) {
         if (msg->events == EAudioMQEvent::UPDATE_VOLUME) {
             _audioControl.setVolume(msg->volume);
+            _audioControl.setIsShuffle(msg->isShuffle);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             auto &list = msg->list;

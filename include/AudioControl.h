@@ -12,7 +12,6 @@ public:
 class Playlist {
 public:
     long id;
-    bool isShuffle;
     std::vector<Sound> sounds;
 };
 
@@ -44,6 +43,8 @@ public:
 
     void setIsSDAccessing(bool isSDAccessing);
 
+    void setIsShuffle(bool isShuffle);
+
 private:
 
     bool isValidPlaylist();
@@ -52,6 +53,7 @@ private:
 
     int _listIndex = 1;
 
+    bool _isShuffle = false;
     bool _isResume = true;
     bool _isSDAccessing = false;
 

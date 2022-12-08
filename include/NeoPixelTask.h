@@ -27,6 +27,8 @@ public:
 
     void task();
 
+    ELightMode getCurrentMode();
+
 private:
     void ticked();
 

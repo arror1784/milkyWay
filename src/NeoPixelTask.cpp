@@ -344,3 +344,7 @@ bool NeoPixelTask::isValidColorSet() {
 
     return !colorSets->empty();
 }
+
+ELightMode NeoPixelTask::getCurrentMode() {
+    return _mode;
+}

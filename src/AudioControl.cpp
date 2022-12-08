@@ -54,7 +54,7 @@ void AudioControl::resume() {
 };
 
 void AudioControl::updatePlaylistIndex() {
-    if (_playList.isShuffle) {
+    if (_isShuffle) {
         _listIndex = random((long) _playList.sounds.size());
     }
     else {
@@ -99,4 +99,8 @@ void AudioControl::setIsSDAccessing(bool isSDAccessing) {
 
 bool AudioControl::isValidPlaylist() {
     return !_playList.sounds.empty();
+}
+
+void AudioControl::setIsShuffle(bool isShuffle) {
+    _isShuffle = isShuffle;
 }

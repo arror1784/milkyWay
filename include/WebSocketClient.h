@@ -50,7 +50,6 @@ public:
     static Playlist parsePlayList(const JsonObject &data) {
         Playlist playlist;
         playlist.id = data["id"];
-        playlist.isShuffle = data["isShuffle"];
         playlist.sounds.clear();
         for (auto jsonSound: JsonArray(data["sounds"])) {
             Sound sound;
