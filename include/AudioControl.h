@@ -40,9 +40,9 @@ public:
 
     bool isPlaying();
 
-    bool isDownloading();
+    bool isSDAccessing();
 
-    void setIsSDAccessing(bool isDownloading);
+    void setIsSDAccessing(bool isSDAccessing);
 
 private:
 

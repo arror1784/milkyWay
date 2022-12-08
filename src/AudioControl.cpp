@@ -89,7 +89,7 @@ bool AudioControl::isPlaying() {
     return _isResume;
 }
 
-bool AudioControl::isDownloading() {
+bool AudioControl::isSDAccessing() {
     return _isSDAccessing;
 }
 

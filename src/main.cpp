@@ -465,6 +465,7 @@ void setup() {
         Serial.println("websocket errorReceived");
     });
 
+
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { NeoPixelTask::getInstance().task(); }
         vTaskDelete(nullptr);
@@ -501,6 +502,7 @@ void loop() {
                 }
                 else {
                     AudioTask::getInstance().setIsSDAccessing(false);
+                    updateAll();
 
                     delete msg;
                 }
@@ -514,6 +516,7 @@ void loop() {
                 }
                 else {
                     AudioTask::getInstance().setIsSDAccessing(false);
+                    updateAll();
 
                     delete msg;
                 }

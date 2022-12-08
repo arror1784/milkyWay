@@ -23,7 +23,7 @@ public:
 
     ShuffleMsgData *getShuffleMsg();
 
-    void setIsSDAccessing(bool isDownloading);
+    void setIsSDAccessing(bool isSDAccessing);
 
     const Sound &getCurrentSound();
 

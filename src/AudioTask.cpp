@@ -11,7 +11,7 @@ void AudioTask::sendMsg(AudioMsgData *dataA) {
 void AudioTask::task() {
     AudioMsgData *msg = _msgQueue.recv();
 
-    if (_audioControl.isDownloading()) {
+    if (_audioControl.isSDAccessing()) {
         if (msg != nullptr) delete msg;
 
         return;
@@ -29,7 +29,7 @@ void AudioTask::task() {
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
-                if(_isCurrentFileDeleted) {
+                if(!_isCurrentFileDeleted) {
                     _audioControl.resume();
                 } else {
                     play();
@@ -101,8 +101,8 @@ ShuffleMsgData *AudioTask::getShuffleMsg() {
     return _shuffleMsgQueue.recv();
 }
 
-void AudioTask::setIsSDAccessing(bool isDownloading) {
-    _audioControl.setIsSDAccessing(isDownloading);
+void AudioTask::setIsSDAccessing(bool isSDAccessing) {
+    _audioControl.setIsSDAccessing(isSDAccessing);
 }
 
 void AudioTask::setNextTick(unsigned long tick) {
