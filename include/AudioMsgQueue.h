@@ -7,7 +7,8 @@
 enum class EAudioMQEvent {
     UPDATE_ENABLE = 0,
     UPDATE_PLAYLIST = 1,
-    UPDATE_VOLUME = 2
+    UPDATE_VOLUME = 2,
+    UPDATE_DELETE_CURRENT_SOUND = 3
 };
 
 class AudioMsgData {

@@ -36,6 +36,8 @@ public:
 
     int16_t getLastGain();
 
+    const Sound &getCurrentSound();
+
     bool isPlaying();
 
     bool isDownloading();

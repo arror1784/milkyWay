@@ -26,6 +26,7 @@ WebSocketClient::WebSocketClient() {
 }
 
 void WebSocketClient::connect() {
+//    _client.setExtraHeaders(_extraHeader.c_str());
     if (_withSSL) {
         _client.beginSSL(_host.c_str(), _port, "/socket");
     }
@@ -64,4 +65,8 @@ void WebSocketClient::sendText(String txt) {
 
 void WebSocketClient::sendPong() {
     _client.sendPing();
+}
+
+void WebSocketClient::addExtraHeader(const String &header) {
+    _extraHeader += header + "\r\n";
 }

@@ -246,6 +246,13 @@ void processSendDeletedSound(const JsonObject &data) {
     audioFileMsg->id = data["id"];
     audioFileMsg->filename = String(data["filename"]);
 
+    if(audioFileMsg->id == AudioTask::getInstance().getCurrentSound().id) {
+        auto *dataA = new AudioMsgData();
+        dataA->events = EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND;
+
+        AudioTask::getInstance().sendMsg(dataA);
+    }
+
     audioFileMsgQueue.send(audioFileMsg);
 }
 
@@ -295,11 +302,12 @@ void receiveWifi() {
     DynamicJsonDocument doc(plainBody.length() * 2);
     deserializeJson(doc, plainBody);
 
-    if (doc.containsKey("ssid") && doc.containsKey("password")) {
+    if (doc.containsKey("ssid") && doc.containsKey("password"), doc.containsKey("token")) {
         String strPayload;
 
         serializeJson(doc, strPayload);
 
+        SDUtil::authenticationToken_ = String(doc["token"]);
         EepromControl::getInstance().setWifiPsk(doc["ssid"], doc["password"]);
 
         Serial.println(EepromControl::getInstance().getWifiSsid());
@@ -315,6 +323,7 @@ void receiveWifi() {
         }
 
         if (!status) {
+            EepromControl::getInstance().setWifiPsk("", "");
             isConnectToWifiWithAPI = false;
 
             webServer.send(400, "text/plain", "network connect fail");
@@ -323,10 +332,10 @@ void receiveWifi() {
 
         isConnectToWifiWithAPI = false;
         webServer.send(200);
-
         delay(5000);
 
         WifiModule::getInstance().stop();
+
         wsClient.connect();
     }
     else {
@@ -389,6 +398,7 @@ void setup() {
         json["name"] = EepromControl::getInstance().getSerial();
         Serial.println(String(json["name"]));
         json["type"] = "Mirror";
+        json["token"] = SDUtil::authenticationToken_;
 
         String strJson;
         serializeJson(json, strJson);
@@ -410,7 +420,17 @@ void setup() {
         }
 
         if (doc.containsKey("authenticationToken")) {
-            SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
+            String token = String(doc["authenticationToken"]);
+
+            if (token.isEmpty()) {
+                wsClient.disconnect();
+                EepromControl::getInstance().setWifiPsk("", "");
+                WifiModule::getInstance().start();
+
+                return;
+            }
+
+            SDUtil::authenticationToken_ = token;
         }
         else if (doc["event"] == "SendLightEffect") {
             processLightEffects(doc["data"]);

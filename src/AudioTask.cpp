@@ -24,12 +24,16 @@ void AudioTask::task() {
             auto &list = msg->list;
             bool status = _audioControl.setPlayList(list);
             if (status) {
-                _audioControl.play();
+                play();
             }
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
             if (msg->enable) {
-                _audioControl.resume();
+                if(_isCurrentFileDeleted) {
+                    _audioControl.resume();
+                } else {
+                    play();
+                }
                 _isShuffle = msg->isShuffle;
 
                 if (_isShuffle) {
@@ -40,6 +44,11 @@ void AudioTask::task() {
                 _audioControl.pause();
                 _nextTick = 0xFFFFFFFF;
             }
+        }
+        else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
+            _audioControl.pause();
+            _isCurrentFileDeleted = true;
+            _nextTick = 0xFFFFFFFF;
         }
 
         delete msg;
@@ -100,8 +109,12 @@ void AudioTask::setNextTick(unsigned long tick) {
     _nextTick = tick;
 }
 
-void AudioTask::playNext() {
+void AudioTask::play() {
     _audioControl.play();
+}
+
+const Sound &AudioTask::getCurrentSound() {
+    return _audioControl.getCurrentSound();
 }
 
 void audio_info(const char *info) {
@@ -112,5 +125,5 @@ void audio_info(const char *info) {
 void audio_eof_mp3(const char *info) {  //end of file
     Serial.print("eof_mp3     ");
     Serial.println(info);
-    AudioTask::getInstance().playNext();
+    AudioTask::getInstance().play();
 }

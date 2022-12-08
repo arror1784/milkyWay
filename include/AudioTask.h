@@ -19,11 +19,13 @@ public:
 
     void task();
 
-    void playNext();
+    void play();
 
     ShuffleMsgData *getShuffleMsg();
 
     void setIsSDAccessing(bool isDownloading);
+
+    const Sound &getCurrentSound();
 
 private:
     void setNextTick(unsigned long tick);
@@ -34,6 +36,7 @@ private:
     TickType_t _tick = xTaskGetTickCount();
     bool _isShuffle = false;
     unsigned long _nextTick = 0xFFFFFFFF;
+    bool _isCurrentFileDeleted = false;
 
     AudioMsgQueue _msgQueue;
     ShuffleMsgQueue _shuffleMsgQueue;

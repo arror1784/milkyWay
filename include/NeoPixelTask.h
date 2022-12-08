@@ -21,9 +21,9 @@ public:
 
     void sendSyncMsg(NeoPixelMsgData *dataN);
 
-    void updateCustomLightEffect(const LightEffect &lightEffect);
+    bool updateCustomLightEffect(const LightEffect &lightEffect);
 
-    void setCurrentLightEffect(ELightMode mode);
+    bool setCurrentLightEffect(ELightMode mode);
 
     void task();
 

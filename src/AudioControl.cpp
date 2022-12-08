@@ -64,9 +64,10 @@ void AudioControl::updatePlaylistIndex() {
 }
 
 void AudioControl::play() {
+    _audio.stopSong();
+
     if (!isValidPlaylist()) return;
 
-    _audio.stopSong();
     updatePlaylistIndex();
 
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
@@ -78,6 +79,10 @@ void AudioControl::loop() {
 
 int16_t AudioControl::getLastGain() {
     return _audio.getLastGain();
+}
+
+const Sound &AudioControl::getCurrentSound() {
+    return _playList.sounds[_listIndex];
 }
 
 bool AudioControl::isPlaying() {
