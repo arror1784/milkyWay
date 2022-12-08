@@ -66,7 +66,3 @@ void WebSocketClient::sendText(String txt) {
 void WebSocketClient::sendPong() {
     _client.sendPing();
 }
-
-void WebSocketClient::addExtraHeader(const String &header) {
-    _extraHeader += header + "\r\n";
-}

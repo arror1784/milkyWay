@@ -256,12 +256,6 @@ void processSendDeletedSound(const JsonObject &data) {
     audioFileMsgQueue.send(audioFileMsg);
 }
 
-void processReset() {
-    EepromControl::getInstance().setWifiPsk("", "");
-    WifiModule::getInstance().disconnectWifi();
-    WifiModule::getInstance().start();
-}
-
 void processPing() {
     wsClient.sendPong();
 }
@@ -409,15 +403,9 @@ void setup() {
         Serial.println("websocket disconnected");
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
+        Serial.println(String(payload, length));
         DynamicJsonDocument doc(length * 2);
         deserializeJson(doc, payload, length);
-
-        if (doc["event"] != "Ping") {
-            String strJson;
-            serializeJson(doc, strJson);
-
-            Serial.println(strJson);
-        }
 
         if (doc.containsKey("authenticationToken")) {
             String token = String(doc["authenticationToken"]);
@@ -452,9 +440,6 @@ void setup() {
         }
         else if (doc["event"] == "SendDeletedSound") {
             processSendDeletedSound(doc["data"]);
-        }
-        else if (doc["event"] == "Reset") {
-            processReset();
         }
     });
     wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
