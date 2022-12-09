@@ -26,7 +26,9 @@ void AudioTask::task() {
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             Serial.println("EAudioMQEvent::UPDATE_PLAYLIST");
             bool status = _audioControl.setPlayList(msg->list);
-            _shouldChangeSound = true;
+            if(status) {
+                _shouldChangeSound = true;
+            }
             handlePlayStatus(status);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
@@ -85,6 +87,7 @@ void AudioTask::task() {
         _pingPongMsgQueue.send(dataP);
 
         _isPingPong = false;
+        _isEnabled = false;
         setNextTick(0xFFFFFFFF);
 
         _audioControl.pause();

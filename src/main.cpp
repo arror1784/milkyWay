@@ -247,7 +247,6 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::Blinking;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
@@ -256,7 +255,6 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::Breathing;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
@@ -265,7 +263,6 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::ColorChange;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }

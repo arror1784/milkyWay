@@ -278,6 +278,8 @@ void NeoPixelTask::finishCycle() {
             dataP->enable = true;
             dataP->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
 
+            _isEnabled = false;
+
             _pingPongMsgQueue.send(dataP);
 
             _count = -1;
