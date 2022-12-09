@@ -19,9 +19,13 @@
 //static const int port = 6001;
 //static const bool ssl = false;
 
-static const String host = "kira-api.wimcorp.dev";
-static const int port = 443;
-static const bool ssl = true;
+static const String host = "13.125.102.123";
+static const int port = 11002;
+static const bool ssl = false;
+
+//static const String host = "kira-api.wimcorp.dev";
+//static const int port = 443;
+//static const bool ssl = true;
 
 AudioFileMsgQueue audioFileMsgQueue(30);
 
