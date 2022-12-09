@@ -27,6 +27,8 @@ public:
 
     const Sound &getCurrentSound();
 
+    void setShouldChangeSound(bool shouldChangeSound);
+
 private:
     void setNextTick(unsigned long tick);
 

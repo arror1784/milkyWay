@@ -37,9 +37,6 @@ void AudioTask::task() {
             _isEnabled = msg->enable;
             _isPingPong = msg->isPingPong;
             handlePlayStatus(true);
-            if (_isEnabled && _isPingPong) {
-                _nextTick = millis() + _pingPongAudioTIme;
-            }
         }
         else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
             Serial.println("EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
@@ -118,17 +115,23 @@ void AudioTask::handlePlayStatus(bool status) {
             _shouldChangeSound = false;
             _audioControl.play();
         }
+        if (_isPingPong) {
+            _nextTick = millis() + _pingPongAudioTIme;
+        }
     }
     else {
         Serial.println("pause run");
         _audioControl.pause();
         _nextTick = 0xFFFFFFFF;
-        _isPingPong = false;
     }
 }
 
 const Sound &AudioTask::getCurrentSound() {
     return _audioControl.getCurrentSound();
+}
+
+void AudioTask::setShouldChangeSound(bool shouldChangeSound) {
+    _shouldChangeSound = shouldChangeSound;
 }
 
 void audio_info(const char *info) {
@@ -139,5 +142,6 @@ void audio_info(const char *info) {
 void audio_eof_mp3(const char *info) {  //end of file
     Serial.print("eof_mp3     ");
     Serial.println(info);
-    AudioTask::getInstance().handlePlayStatus();
+    AudioTask::getInstance().setShouldChangeSound(true);
+    AudioTask::getInstance().handlePlayStatus(true);
 }
