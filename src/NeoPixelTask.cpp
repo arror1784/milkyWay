@@ -105,16 +105,22 @@ bool NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
 bool NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
     switch (mode) {
         case ELightMode::Breathing:
+            Serial.println("_currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
             _currentLightEffect = _breathingLightEffect.id == 0
                                   ? &_defaultBreathingLightEffect : &_breathingLightEffect;
+            Serial.println("mode : " + String((int) mode));
             return _currentLightEffect->mode != mode;
         case ELightMode::Blinking:
+            Serial.println("_currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
             _currentLightEffect = _blinkingLightEffect.id == 0
                                   ? &_defaultBlinkingLightEffect : &_blinkingLightEffect;
+            Serial.println("mode : " + String((int) mode));
             return _currentLightEffect->mode != mode;
         case ELightMode::ColorChange:
+            Serial.println("_currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
             _currentLightEffect = _colorChangeLightEffect.id == 0
                                   ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
+            Serial.println("mode : " + String((int) mode));
             return _currentLightEffect->mode != mode;
         default:
             if (_lightEffectIndexes.empty()) {
@@ -138,6 +144,8 @@ void NeoPixelTask::task() {
             Serial.println("ENeoPixelMQEvent::UPDATE_EFFECT");
             bool status = updateCustomLightEffect(msg->lightEffect);
             if (status) {
+                refreshColorSet(true);
+
                 applyEvent();
             }
         }
@@ -145,7 +153,10 @@ void NeoPixelTask::task() {
             Serial.println("ENeoPixelMQEvent::UPDATE_MODE");
             _mode = msg->mode;
             bool status = setCurrentLightEffect(msg->mode);
+            Serial.println("setCurrentLightEffect : " + String((int) _currentLightEffect->mode));
             if (status) {
+                refreshColorSet(true);
+
                 applyEvent();
             }
         }
@@ -156,6 +167,8 @@ void NeoPixelTask::task() {
             if (_isEnabled) {
                 _isPingPong = msg->isPingPong;
                 setCurrentLightEffect(_mode);
+
+                refreshColorSet(true);
 
                 applyEvent();
             }
@@ -186,11 +199,12 @@ void NeoPixelTask::applyEvent() {
     if (_isPingPong) {
         _count = _oneCycleCount;
     }
-    if (_isEnabled && isValidColorSet()) {
+    if (_isEnabled && !getCurrentColorSet().empty()) {
         Serial.println("applyEvent");
-        refreshColorSet();
         refreshSpeed();
         refreshNextTick();
+
+        Serial.println("_speed : " + String(_speed));
     }
 }
 
@@ -233,6 +247,8 @@ bool NeoPixelTask::breath() {
         }
         refreshSpeed();
         refreshNextTick();
+
+        Serial.println("_speed : " + String(_speed));
         return true;
     }
     refreshNextTick();
@@ -244,6 +260,8 @@ bool NeoPixelTask::blink() {
         _neoPixel.off();
         refreshSpeed();
         refreshNextTick();
+
+        Serial.println("_speed : " + String(_speed));
         return true;
     }
     _neoPixel.on();
@@ -263,9 +281,12 @@ void NeoPixelTask::finishCycle() {
     if (_count == -1) {
         if (_mode == ELightMode::Mixed) {
             setCurrentLightEffect(_mode);
-            refreshColorSet();
+
+            refreshColorSet(true);
             refreshSpeed();
             refreshNextTick();
+
+            Serial.println("_speed : " + String(_speed));
         }
     }
     else if (_isPingPong) {
@@ -297,16 +318,12 @@ void NeoPixelTask::reset() {
 }
 
 // 네오픽셀에게 현재 조명효과내에 있는 컬러셋 중 하나로 갱신하여 넘겨준다.
-void NeoPixelTask::refreshColorSet() {
-    std::vector<ColorSet> *colorSets = &_currentLightEffect->colorSets;
+void NeoPixelTask::refreshColorSet(bool shouldResetColorIndexes) {
+    const std::vector<ColorSet> &colorSets = getCurrentColorSet();
 
-    if (_currentLightEffect->isRandomColor) {
-        if (_currentLightEffect->mode == ELightMode::Breathing) colorSets = &_defaultBreathingLightEffect.colorSets;
-        if (_currentLightEffect->mode == ELightMode::Blinking) colorSets = &_defaultBlinkingLightEffect.colorSets;
-    }
-
-    if (_colorIndexes.empty()) {
-        for (int i = 0; i < colorSets->size(); i++) {
+    if (shouldResetColorIndexes || _colorIndexes.empty()) {
+        _colorIndexes.clear();
+        for (int i = 0; i < colorSets.size(); i++) {
             _colorIndexes.push_back(i);
         }
     }
@@ -315,7 +332,7 @@ void NeoPixelTask::refreshColorSet() {
     int randomColorSetIndex = _colorIndexes[randomValue];
     _colorIndexes.erase(_colorIndexes.begin() + randomValue);
 
-    _neoPixel.setColorSet(colorSets->operator[](randomColorSetIndex));
+    _neoPixel.setColorSet(colorSets[randomColorSetIndex]);
 }
 
 // 현재 조명효과의 모드에 따른 스피드를 넣는다.
@@ -346,15 +363,13 @@ void NeoPixelTask::refreshNextTick() {
     _nextTick = millis() + _speed;
 }
 
-bool NeoPixelTask::isValidColorSet() {
-    std::vector<ColorSet> *colorSets = &_currentLightEffect->colorSets;
-
+const std::vector<ColorSet> &NeoPixelTask::getCurrentColorSet() {
     if (_currentLightEffect->isRandomColor) {
-        if (_currentLightEffect->mode == ELightMode::Breathing) colorSets = &_defaultBreathingLightEffect.colorSets;
-        if (_currentLightEffect->mode == ELightMode::Blinking) colorSets = &_defaultBlinkingLightEffect.colorSets;
+        if (_currentLightEffect->mode == ELightMode::Breathing) return _defaultBreathingLightEffect.colorSets;
+        if (_currentLightEffect->mode == ELightMode::Blinking) return _defaultBlinkingLightEffect.colorSets;
     }
 
-    return !colorSets->empty();
+    return _currentLightEffect->colorSets;
 }
 
 ELightMode NeoPixelTask::getCurrentMode() {

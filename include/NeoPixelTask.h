@@ -46,13 +46,13 @@ private:
 
     void reset();
 
-    void refreshColorSet();
+    void refreshColorSet(bool shouldResetColorIndexes = false);
 
     void refreshSpeed();
 
     void refreshNextTick();
 
-    bool isValidColorSet();
+    const std::vector<ColorSet> &getCurrentColorSet();
 
     ELightMode _mode = ELightMode::None;
 
