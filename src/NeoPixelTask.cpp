@@ -1,6 +1,6 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _shuffleMsgQueue(30),
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _pingPongMsgQueue(30),
                                _msgQueue(30), _syncMsgQueue(30) {
     _defaultBreathingLightEffect = {
         .id = 0,
@@ -52,8 +52,8 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
     _neoPixel.off();
 }
 
-ShuffleMsgData *NeoPixelTask::getShuffleMsg() {
-    return _shuffleMsgQueue.recv();
+PingPongMsgData *NeoPixelTask::getPingPongMsg() {
+    return _pingPongMsgQueue.recv();
 }
 
 void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
@@ -136,7 +136,7 @@ void NeoPixelTask::task() {
     if (msg != nullptr) {
         if (msg->events == ENeoPixelMQEvent::UPDATE_EFFECT) {
             bool status = updateCustomLightEffect(msg->lightEffect);
-            if (status && isValidColorSet()) {
+            if (_isEnabled && status && isValidColorSet()) {
                 refreshColorSet();
                 refreshSpeed();
                 refreshNextTick();
@@ -144,7 +144,7 @@ void NeoPixelTask::task() {
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
             bool status = setCurrentLightEffect(msg->mode);
-            if (status && isValidColorSet()) {
+            if (_isEnabled && status && isValidColorSet()) {
                 refreshColorSet();
                 refreshSpeed();
                 refreshNextTick();
@@ -152,9 +152,10 @@ void NeoPixelTask::task() {
             _mode = msg->mode;
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
-            if (msg->enable) {
-                _isShuffle = msg->isShuffle;
-                if (_isShuffle) {
+            _isEnabled = msg->enable;
+            if (_isEnabled) {
+                _isPingPong = msg->isPingPong;
+                if (_isPingPong) {
                     _count = _oneCycleCount;
                 }
                 setCurrentLightEffect(_mode);
@@ -263,17 +264,17 @@ void NeoPixelTask::finishCycle() {
             refreshNextTick();
         }
     }
-    else if (_isShuffle) {
+    else if (_isPingPong) {
         if (_count > 1) {
             _count -= 1;
         }
         else if (_count == 1) {
-            auto dataS = new ShuffleMsgData();
+            auto dataS = new PingPongMsgData();
 
             dataS->enable = true;
-            dataS->events = EShuffleSMQEvent::FINISH_NEO_PIXEL;
+            dataS->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
 
-            _shuffleMsgQueue.send(dataS);
+            _pingPongMsgQueue.send(dataS);
 
             _count = -1;
 
@@ -285,7 +286,7 @@ void NeoPixelTask::finishCycle() {
 void NeoPixelTask::reset() {
     _neoPixel.off();
     _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-    _isShuffle = false;
+    _isPingPong = false;
     _nextTick = 0xFFFFFFFF;
 }
 

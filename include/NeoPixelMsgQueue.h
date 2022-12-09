@@ -22,7 +22,7 @@ public:
     ELightMode mode;
     bool enable = true;
     uint8_t sync = 0;
-    bool isShuffle = false;
+    bool isPingPong = false;
 };
 
 class NeoPixelMsgQueue : public MsgQueue<NeoPixelMsgData> {

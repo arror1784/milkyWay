@@ -18,7 +18,7 @@ enum class EDeviceType {
 };
 
 enum class EInteractionMode {
-    LightOnly, SoundOnly, Shuffle, Synchronization, N
+    LightOnly, SoundOnly, PingPong, Synchronization, N
 };
 
 enum class EOperationMode {

@@ -1,7 +1,7 @@
 #ifndef MILKYWAY_NEOPIXEL_TASK_H
 #define MILKYWAY_NEOPIXEL_TASK_H
 
-#include "ShuffleMsgQueue.h"
+#include "PingPongMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "NeoPixel.h"
 #include "UserModeControl.h"
@@ -15,7 +15,7 @@ class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
     NeoPixelTask();
 
-    ShuffleMsgData *getShuffleMsg();
+    PingPongMsgData *getPingPongMsg();
 
     void sendMsg(NeoPixelMsgData *dataN);
 
@@ -60,7 +60,7 @@ private:
     uint8_t _sync = 0;
     bool _isSyncMode = false;
     NeoPixel _neoPixel;
-    bool _isShuffle = false;
+    bool _isPingPong = false;
     bool _isEnabled = false;
 
     // -1일 경우 무한 반복
@@ -68,7 +68,7 @@ private:
 
     NeoPixelMsgQueue _msgQueue;
     NeoPixelMsgQueue _syncMsgQueue;
-    ShuffleMsgQueue _shuffleMsgQueue;
+    PingPongMsgQueue _pingPongMsgQueue;
 
     LightEffect *_currentLightEffect;
 

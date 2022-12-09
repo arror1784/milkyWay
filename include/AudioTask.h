@@ -1,7 +1,7 @@
 #ifndef MILKYWAY_AUDIO_TASK_H
 #define MILKYWAY_AUDIO_TASK_H
 
-#include "ShuffleMsgQueue.h"
+#include "PingPongMsgQueue.h"
 #include "NeoPixelTask.h"
 #include "AudioMsgQueue.h"
 #include "Singleton.h"
@@ -21,7 +21,7 @@ public:
 
     void play();
 
-    ShuffleMsgData *getShuffleMsg();
+    PingPongMsgData *getPingPongMsg();
 
     void setIsSDAccessing(bool isSDAccessing);
 
@@ -34,15 +34,15 @@ private:
     int _volume = 10;  // 0...21
     std::vector<int> _gains;
     TickType_t _tick = xTaskGetTickCount();
-    bool _isShuffle = false;
+    bool _isPingPong = false;
     unsigned long _nextTick = 0xFFFFFFFF;
     bool _isCurrentFileDeleted = false;
 
     AudioMsgQueue _msgQueue;
-    ShuffleMsgQueue _shuffleMsgQueue;
+    PingPongMsgQueue _pingPongMsgQueue;
     AudioControl _audioControl;
 
-    const long _shuffleAudioTIme = 5500;
+    const long _pingPongAudioTIme = 5500;
     const int _syncUpdateResolution = 10;
 };
 

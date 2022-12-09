@@ -11,7 +11,7 @@
 #include "EepromControl.h"
 
 #include "AudioFileMsgQueue.h"
-#include "ShuffleTask.h"
+#include "PingPongTask.h"
 #include "NeoPixelTask.h"
 #include "AudioTask.h"
 
@@ -30,8 +30,8 @@ WebServer webServer(80);
 
 bool isConnectToWifiWithAPI = false;
 
-void updateWithoutShuffle() {
-    Serial.println("updateWithoutShuffle");
+void updateWithoutPingPong() {
+    Serial.println("updateWithoutPingPong");
     // 싱크일 때
     // 감지됨 : 상크 모드 전송, 싱크 활성화, 네오픽셀 활성화, 오디오 활성화
     // 감지안됨 : 싱크 모드 전송, 싱크 홠겅화, 네오픽셀 비활성화, 오디오 비활성화
@@ -78,8 +78,8 @@ void updateWithoutShuffle() {
     NeoPixelTask::getInstance().sendMsg(dataN);
 }
 
-void updateShuffle(bool isLightModeChanged) {
-    Serial.println("updateShuffle");
+void updatePinPong(bool isLightModeChanged) {
+    Serial.println("updatePinPong");
     // 셔플일 때
     // 감지됨 : 셔플 모드 전송, 셔플 활성화, 네오픽셀 비활성화
     // 감지안됨 : 셔플 모드 전송, 셔플 비활성화, 네오픽셀 비활성화
@@ -98,11 +98,11 @@ void updateShuffle(bool isLightModeChanged) {
         AudioTask::getInstance().sendMsg(dataA);
         NeoPixelTask::getInstance().sendMsg(dataN);
 
-        auto *dataS = new ShuffleMsgData();
-        dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
+        auto *dataS = new PingPongMsgData();
+        dataS->events = EPingPongMQEvent::UPDATE_ENABLE;
         dataS->enable = UserModeControl::getInstance().humanDetection;
 
-        ShuffleTask::getInstance().sendMsg(dataS);
+        PingPongTask::getInstance().sendMsg(dataS);
     }
 }
 
@@ -117,11 +117,11 @@ void processHumanDetection(const JsonObject &data) {
         UserModeControl::getInstance().humanDetection = data["isDetected"];
     }
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
-        updateShuffle(true);
+    if (UserModeControl::getInstance().interactionMode == EInteractionMode::PingPong) {
+        updatePinPong(true);
     }
     else {
-        updateWithoutShuffle();
+        updateWithoutPingPong();
     }
 }
 
@@ -170,11 +170,11 @@ void processUserMode(const JsonObject &data) {
     EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
     UserModeControl::getInstance().interactionMode = newInteractionMode;
 
-    if (newInteractionMode == EInteractionMode::Shuffle) {
-        updateShuffle(oldLightMode != newLightMode);
+    if (newInteractionMode == EInteractionMode::PingPong) {
+        updatePinPong(oldLightMode != newLightMode);
         return;
     }
-    updateWithoutShuffle();
+    updateWithoutPingPong();
 }
 
 void processPlayList(const JsonObject &data) {
@@ -472,9 +472,9 @@ void setup() {
         vTaskDelete(nullptr);
     }, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
-        while (1) { ShuffleTask::getInstance().task(); }
+        while (1) { PingPongTask::getInstance().task(); }
         vTaskDelete(nullptr);
-    }, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
+    }, "pingPongTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { AudioTask::getInstance().task(); }
         vTaskDelete(nullptr);
@@ -487,11 +487,11 @@ void handleAudioFileMsg(bool status, AudioFileMsgData *msg) {
     }
     else {
         AudioTask::getInstance().setIsSDAccessing(false);
-        if (UserModeControl::getInstance().interactionMode == EInteractionMode::Shuffle) {
-            updateShuffle(true);
+        if (UserModeControl::getInstance().interactionMode == EInteractionMode::PingPong) {
+            updatePinPong(true);
         }
         else {
-            updateWithoutShuffle();
+            updateWithoutPingPong();
         }
 
         delete msg;

@@ -1,6 +1,6 @@
 #include "AudioTask.h"
 
-AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30), _shuffleMsgQueue(30) {
+AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30), _pingPongMsgQueue(30) {
     _audioControl.setVolume(_volume);
 }
 
@@ -18,30 +18,36 @@ void AudioTask::task() {
     }
     if (msg != nullptr) {
         if (msg->events == EAudioMQEvent::UPDATE_VOLUME) {
+            Serial.println("EAudioMQEvent::UPDATE_VOLUME");
             _audioControl.setVolume(msg->volume);
             _audioControl.setIsShuffle(msg->isShuffle);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
+            Serial.println("EAudioMQEvent::UPDATE_PLAYLIST");
             auto &list = msg->list;
             bool status = _audioControl.setPlayList(list);
-            if (status) {
+            if (status && _isEnabled) {
                 play();
             }
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
-            if (msg->enable) {
-                if(!_isCurrentFileDeleted) {
+            Serial.println("EAudioMQEvent::UPDATE_ENABLE");
+            _isEnabled = msg->enable;
+            if (_isEnabled) {
+                if (!_isCurrentFileDeleted) {
                     _audioControl.resume();
-                } else {
+                }
+                else {
                     play();
                 }
-                _isShuffle = msg->isShuffle;
+                _isPingPong = msg->isPingPong;
 
-                if (_isShuffle) {
-                    _nextTick = millis() + _shuffleAudioTIme;
+                if (_isPingPong) {
+                    _nextTick = millis() + _pingPongAudioTIme;
                 }
             }
             else {
+                _isEnabled = false;
                 _audioControl.pause();
                 _nextTick = 0xFFFFFFFF;
             }
@@ -83,23 +89,23 @@ void AudioTask::task() {
         }
     }
 
-    if (_isShuffle && _nextTick <= millis()) {
-        auto *dataS = new ShuffleMsgData();
+    if (_isPingPong && _nextTick <= millis()) {
+        auto *dataS = new PingPongMsgData();
 
-        dataS->events = EShuffleSMQEvent::FINISH_SOUND;
+        dataS->events = EPingPongMQEvent::FINISH_SOUND;
         dataS->enable = true;
 
-        _shuffleMsgQueue.send(dataS);
+        _pingPongMsgQueue.send(dataS);
 
-        _isShuffle = false;
+        _isPingPong = false;
         setNextTick(0xFFFFFFFF);
 
         _audioControl.pause();
     }
 }
 
-ShuffleMsgData *AudioTask::getShuffleMsg() {
-    return _shuffleMsgQueue.recv();
+PingPongMsgData *AudioTask::getPingPongMsg() {
+    return _pingPongMsgQueue.recv();
 }
 
 void AudioTask::setIsSDAccessing(bool isSDAccessing) {

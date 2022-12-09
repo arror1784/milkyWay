@@ -16,6 +16,7 @@ public:
     Playlist list;
     EAudioMQEvent events;
     bool enable = true;
+    bool isPingPong = false;
     bool isShuffle = false;
     int volume = 0;
 };
