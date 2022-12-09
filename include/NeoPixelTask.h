@@ -30,6 +30,8 @@ public:
     ELightMode getCurrentMode();
 
 private:
+    void applyEvent();
+
     void ticked();
 
     // breath 기능 중 싸이클이 끝날때마다 true를 반환합니다.

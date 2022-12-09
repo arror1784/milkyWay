@@ -135,36 +135,29 @@ void NeoPixelTask::task() {
 
     if (msg != nullptr) {
         if (msg->events == ENeoPixelMQEvent::UPDATE_EFFECT) {
+            Serial.println("ENeoPixelMQEvent::UPDATE_EFFECT");
             bool status = updateCustomLightEffect(msg->lightEffect);
-            if (_isEnabled && status && isValidColorSet()) {
-                refreshColorSet();
-                refreshSpeed();
-                refreshNextTick();
+            if (status) {
+                applyEvent();
             }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_MODE) {
-            bool status = setCurrentLightEffect(msg->mode);
-            if (_isEnabled && status && isValidColorSet()) {
-                refreshColorSet();
-                refreshSpeed();
-                refreshNextTick();
-            }
+            Serial.println("ENeoPixelMQEvent::UPDATE_MODE");
             _mode = msg->mode;
+            bool status = setCurrentLightEffect(msg->mode);
+            if (status) {
+                applyEvent();
+            }
         }
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
+            Serial.println("ENeoPixelMQEvent::UPDATE_ENABLE");
+            Serial.println("_isEnabled : " + String(msg->enable));
             _isEnabled = msg->enable;
             if (_isEnabled) {
                 _isPingPong = msg->isPingPong;
-                if (_isPingPong) {
-                    _count = _oneCycleCount;
-                }
                 setCurrentLightEffect(_mode);
 
-                if (isValidColorSet()) {
-                    refreshColorSet();
-                    refreshSpeed();
-                    refreshNextTick();
-                }
+                applyEvent();
             }
             else {
                 reset();
@@ -186,6 +179,18 @@ void NeoPixelTask::task() {
 
     if (millis() >= _nextTick) {
         ticked();
+    }
+}
+
+void NeoPixelTask::applyEvent() {
+    if (_isPingPong) {
+        _count = _oneCycleCount;
+    }
+    if (_isEnabled && isValidColorSet()) {
+        Serial.println("applyEvent");
+        refreshColorSet();
+        refreshSpeed();
+        refreshNextTick();
     }
 }
 
@@ -249,7 +254,6 @@ bool NeoPixelTask::blink() {
 }
 
 void NeoPixelTask::sync() {
-    _speed = 24;
     _neoPixel.on(_sync);
 
     refreshNextTick();
@@ -269,12 +273,12 @@ void NeoPixelTask::finishCycle() {
             _count -= 1;
         }
         else if (_count == 1) {
-            auto dataS = new PingPongMsgData();
+            auto dataP = new PingPongMsgData();
 
-            dataS->enable = true;
-            dataS->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
+            dataP->enable = true;
+            dataP->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
 
-            _pingPongMsgQueue.send(dataS);
+            _pingPongMsgQueue.send(dataP);
 
             _count = -1;
 
@@ -314,6 +318,11 @@ void NeoPixelTask::refreshColorSet() {
 
 // 현재 조명효과의 모드에 따른 스피드를 넣는다.
 void NeoPixelTask::refreshSpeed() {
+    if (_isSyncMode) {
+        _speed = 24;
+        return;
+    }
+
     switch (_currentLightEffect->mode) {
         // blinking은 무조건 랜덤
         case ELightMode::Blinking:

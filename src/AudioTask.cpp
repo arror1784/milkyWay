@@ -21,40 +21,28 @@ void AudioTask::task() {
             Serial.println("EAudioMQEvent::UPDATE_VOLUME");
             _audioControl.setVolume(msg->volume);
             _audioControl.setIsShuffle(msg->isShuffle);
+            handlePlayStatus(true);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             Serial.println("EAudioMQEvent::UPDATE_PLAYLIST");
-            auto &list = msg->list;
-            bool status = _audioControl.setPlayList(list);
-            if (status && _isEnabled) {
-                play();
-            }
+            bool status = _audioControl.setPlayList(msg->list);
+            _shouldChangeSound = true;
+            handlePlayStatus(status);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
             Serial.println("EAudioMQEvent::UPDATE_ENABLE");
+            Serial.println("_isEnabled : " + String(msg->enable));
             _isEnabled = msg->enable;
-            if (_isEnabled) {
-                if (!_isCurrentFileDeleted) {
-                    _audioControl.resume();
-                }
-                else {
-                    play();
-                }
-                _isPingPong = msg->isPingPong;
-
-                if (_isPingPong) {
-                    _nextTick = millis() + _pingPongAudioTIme;
-                }
-            }
-            else {
-                _isEnabled = false;
-                _audioControl.pause();
-                _nextTick = 0xFFFFFFFF;
+            _isPingPong = msg->isPingPong;
+            handlePlayStatus(true);
+            if (_isEnabled && _isPingPong) {
+                _nextTick = millis() + _pingPongAudioTIme;
             }
         }
         else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
+            Serial.println("EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
             _audioControl.pause();
-            _isCurrentFileDeleted = true;
+            _shouldChangeSound = true;
             _nextTick = 0xFFFFFFFF;
         }
 
@@ -62,8 +50,7 @@ void AudioTask::task() {
     }
     _audioControl.loop();
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization
-        && _audioControl.isPlaying()) {
+    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization && _isEnabled) {
         if (_syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - _tick)) {
             auto gain = std::abs(_audioControl.getLastGain()) / _volume;
 
@@ -90,12 +77,12 @@ void AudioTask::task() {
     }
 
     if (_isPingPong && _nextTick <= millis()) {
-        auto *dataS = new PingPongMsgData();
+        auto *dataP = new PingPongMsgData();
 
-        dataS->events = EPingPongMQEvent::FINISH_SOUND;
-        dataS->enable = true;
+        dataP->events = EPingPongMQEvent::FINISH_SOUND;
+        dataP->enable = true;
 
-        _pingPongMsgQueue.send(dataS);
+        _pingPongMsgQueue.send(dataP);
 
         _isPingPong = false;
         setNextTick(0xFFFFFFFF);
@@ -116,8 +103,25 @@ void AudioTask::setNextTick(unsigned long tick) {
     _nextTick = tick;
 }
 
-void AudioTask::play() {
-    _audioControl.play();
+void AudioTask::handlePlayStatus(bool status) {
+    Serial.println("handlePlayStatus");
+    if (_isEnabled && status) {
+        if (!_shouldChangeSound) {
+            Serial.println("resume run");
+            _audioControl.resume();
+        }
+        else {
+            Serial.println("play run");
+            _shouldChangeSound = false;
+            _audioControl.play();
+        }
+    }
+    else {
+        Serial.println("pause run");
+        _audioControl.pause();
+        _nextTick = 0xFFFFFFFF;
+        _isPingPong = false;
+    }
 }
 
 const Sound &AudioTask::getCurrentSound() {
@@ -132,5 +136,5 @@ void audio_info(const char *info) {
 void audio_eof_mp3(const char *info) {  //end of file
     Serial.print("eof_mp3     ");
     Serial.println(info);
-    AudioTask::getInstance().play();
+    AudioTask::getInstance().handlePlayStatus();
 }

@@ -19,7 +19,7 @@ public:
 
     void task();
 
-    void play();
+    void handlePlayStatus(bool status = true);
 
     PingPongMsgData *getPingPongMsg();
 
@@ -36,7 +36,7 @@ private:
     TickType_t _tick = xTaskGetTickCount();
     bool _isPingPong = false;
     unsigned long _nextTick = 0xFFFFFFFF;
-    bool _isCurrentFileDeleted = false;
+    bool _shouldChangeSound = true;
 
     AudioMsgQueue _msgQueue;
     PingPongMsgQueue _pingPongMsgQueue;

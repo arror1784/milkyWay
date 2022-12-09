@@ -9,12 +9,13 @@ void PingPongTask::sendMsg(PingPongMsgData *dataN) {
 }
 
 void PingPongTask::task() {
-    PingPongMsgData *dataS = _msgQueue.recv();
+    PingPongMsgData *msg = _msgQueue.recv();
 
-    if (dataS != nullptr) {
-        if (dataS->events == EPingPongMQEvent::UPDATE_ENABLE) {
-            if (dataS->enable) {
+    if (msg != nullptr) {
+        if (msg->events == EPingPongMQEvent::UPDATE_ENABLE) {
+            if (msg->enable) {
                 Serial.println("EPingPongMQEvent::UPDATE_ENABLE");
+                Serial.println("_isEnabled : " + String(msg->enable));
                 auto *dataA = new AudioMsgData();
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
                 dataA->isPingPong = true;
@@ -28,30 +29,30 @@ void PingPongTask::task() {
             }
         }
 
-        delete dataS;
+        delete msg;
     }
 
-    dataS = NeoPixelTask::getInstance().getPingPongMsg();
+    msg = NeoPixelTask::getInstance().getPingPongMsg();
 
-    if (dataS != nullptr) {
-        if (dataS->events == EPingPongMQEvent::FINISH_NEO_PIXEL) {
+    if (msg != nullptr) {
+        if (msg->events == EPingPongMQEvent::FINISH_NEO_PIXEL) {
             Serial.println("EPingPongMQEvent::FINISH_NEO_PIXEL");
             _isNextSound = true;
             _nextTick = millis() + _pingPongSleepTIme;
         }
-        delete dataS;
+        delete msg;
     }
 
-    dataS = AudioTask::getInstance().getPingPongMsg();
+    msg = AudioTask::getInstance().getPingPongMsg();
 
-    if (dataS != nullptr) {
-        if (dataS->events == EPingPongMQEvent::FINISH_SOUND) {
+    if (msg != nullptr) {
+        if (msg->events == EPingPongMQEvent::FINISH_SOUND) {
             Serial.println("EPingPongMQEvent::FINISH_SOUND");
             _isNextSound = false;
             _nextTick = millis() + _pingPongSleepTIme;
         }
 
-        delete dataS;
+        delete msg;
     }
 
     if (_nextTick <= millis()) {

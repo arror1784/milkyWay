@@ -7,8 +7,8 @@
 
 class UserModeControl : public Singleton<UserModeControl>{
 public:
-    EInteractionMode interactionMode = EInteractionMode::LightOnly;
-    EOperationMode operationMode = EOperationMode::Default;
+    EInteractionMode interactionMode = EInteractionMode::N;
+    EOperationMode operationMode = EOperationMode::N;
     bool humanDetection = false;
 };
 

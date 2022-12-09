@@ -30,109 +30,166 @@ WebServer webServer(80);
 
 bool isConnectToWifiWithAPI = false;
 
-void updateWithoutPingPong() {
-    Serial.println("updateWithoutPingPong");
-    // 싱크일 때
-    // 감지됨 : 상크 모드 전송, 싱크 활성화, 네오픽셀 활성화, 오디오 활성화
-    // 감지안됨 : 싱크 모드 전송, 싱크 홠겅화, 네오픽셀 비활성화, 오디오 비활성화
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
-        auto *dataN = new NeoPixelMsgData();
-        dataN->lightEffect = LightEffect();
-        dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
-        dataN->enable = UserModeControl::getInstance().humanDetection;
+void disableAllTask() {
+    Serial.println("disableAllTask");
 
-        NeoPixelTask::getInstance().sendSyncMsg(dataN);
-    }
-
+    // 오디오 비활성화
     auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
     dataA->events = EAudioMQEvent::UPDATE_ENABLE;
     dataA->enable = false;
 
+    // 네오픽셀 비활성화
+    auto *dataN = new NeoPixelMsgData();
+    dataN->lightEffect = LightEffect();
+    dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+    dataN->enable = false;
+
+    // 핑퐁 비활성화
+    auto *dataP = new PingPongMsgData();
+    dataP->events = EPingPongMQEvent::UPDATE_ENABLE;
+    dataP->enable = false;
+
+    AudioTask::getInstance().sendMsg(dataA);
+    NeoPixelTask::getInstance().sendMsg(dataN);
+    PingPongTask::getInstance().sendMsg(dataP);
+}
+
+void handleInteractionMode() {
+    Serial.println("handleInteractionMode");
+    auto interactionMode = UserModeControl::getInstance().interactionMode;
+
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+    dataA->enable = true;
+
     auto *dataN = new NeoPixelMsgData();
     dataN->lightEffect = LightEffect();
     dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
     dataN->mode = ELightMode::None;
-    dataN->enable = false;
+    dataN->enable = true;
 
-    if (UserModeControl::getInstance().humanDetection) {
-        switch (UserModeControl::getInstance().interactionMode) {
-            case EInteractionMode::LightOnly :
-                dataN->enable = true;
-                dataA->enable = false;
-                break;
-            case EInteractionMode::SoundOnly :
-                dataN->enable = false;
-                dataA->enable = true;
-                break;
-            case EInteractionMode::Synchronization :
-                dataN->enable = true;
-                dataA->enable = true;
-                break;
-            default:
-                break;
-        }
-    }
+    auto *dataP = new PingPongMsgData();
+    dataP->events = EPingPongMQEvent::UPDATE_ENABLE;
+    dataP->enable = true;
 
-    AudioTask::getInstance().sendMsg(dataA);
-    NeoPixelTask::getInstance().sendMsg(dataN);
-}
-
-void updatePinPong(bool isLightModeChanged) {
-    Serial.println("updatePinPong");
-    // 셔플일 때
-    // 감지됨 : 셔플 모드 전송, 셔플 활성화, 네오픽셀 비활성화
-    // 감지안됨 : 셔플 모드 전송, 셔플 비활성화, 네오픽셀 비활성화
-    if(isLightModeChanged) {
-        auto *dataA = new AudioMsgData();
-        dataA->list = Playlist();
-        dataA->events = EAudioMQEvent::UPDATE_ENABLE;
-        dataA->enable = false;
-
-        auto *dataN = new NeoPixelMsgData();
-        dataN->lightEffect = LightEffect();
-        dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
-        dataN->mode = ELightMode::None;
-        dataN->enable = false;
-
-        AudioTask::getInstance().sendMsg(dataA);
+    if (EInteractionMode::LightOnly == interactionMode) {
         NeoPixelTask::getInstance().sendMsg(dataN);
 
-        auto *dataS = new PingPongMsgData();
-        dataS->events = EPingPongMQEvent::UPDATE_ENABLE;
-        dataS->enable = UserModeControl::getInstance().humanDetection;
+        delete dataA;
+        delete dataP;
+    }
+    else if (EInteractionMode::SoundOnly == interactionMode) {
+        AudioTask::getInstance().sendMsg(dataA);
 
-        PingPongTask::getInstance().sendMsg(dataS);
+        delete dataN;
+        delete dataP;
+    }
+    else if (EInteractionMode::Synchronization == interactionMode) {
+        NeoPixelTask::getInstance().sendMsg(dataN);
+        AudioTask::getInstance().sendMsg(dataA);
+
+        delete dataP;
+    }
+    else { // EInteractionMode::Synchronization == EInteractionMode::PingPong
+        PingPongTask::getInstance().sendMsg(dataP);
+
+        delete dataN;
+        delete dataA;
     }
 }
 
 void processHumanDetection(const JsonObject &data) {
+    Serial.println("processHumanDetection");
+
+    bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
+    bool newHumanDetection;
+
     if (UserModeControl::getInstance().operationMode == EOperationMode::Default) {
-        UserModeControl::getInstance().humanDetection = true;
+        newHumanDetection = true;
     }
-    if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
-        UserModeControl::getInstance().humanDetection = !data["isDetected"];
+    else if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
+        newHumanDetection = !data["isDetected"];
     }
     else {
-        UserModeControl::getInstance().humanDetection = data["isDetected"];
+        newHumanDetection = data["isDetected"];
     }
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::PingPong) {
-        updatePinPong(true);
+    if (newHumanDetection != oldHumanDetection) {
+        disableAllTask();
+        if (newHumanDetection) {
+            handleInteractionMode();
+        }
     }
-    else {
-        updateWithoutPingPong();
-    }
+    UserModeControl::getInstance().humanDetection = newHumanDetection;
+
+    Serial.println("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
 }
 
 void processUserMode(const JsonObject &data) {
-    ELightMode oldLightMode = NeoPixelTask::getInstance().getCurrentMode();
-    ELightMode newLightMode = Util::stringToELightMode(data["lightMode"]);
+    Serial.println("processUserMode");
+
+    EOperationMode oldOperationMode = UserModeControl::getInstance().operationMode;
+    EOperationMode newOperationMode = Util::stringToEOperationMode(data["operationMode"]);
+    UserModeControl::getInstance().operationMode = newOperationMode;
+
+    EInteractionMode oldInteractionMode = UserModeControl::getInstance().interactionMode;
+    EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
+    UserModeControl::getInstance().interactionMode = newInteractionMode;
+
+    bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
+    bool newHumanDetection = oldHumanDetection;
+
+    /*
+     * D -> D = true
+     * D -> A = false
+     * D -> B = true
+     *
+     * A -> D = true
+     * A -> A = 유지
+     * A -> B = 반전
+     *
+     * B -> D = true
+     * B -> A = 반전
+     * B -> B = 유지
+    **/
+
+    if (newOperationMode == EOperationMode::Default) {
+        newHumanDetection = true;
+    }
+    else if (oldOperationMode == EOperationMode::Default ||
+             oldOperationMode == EOperationMode::N) {
+        if (newOperationMode == EOperationMode::HumanDetectionA) {
+            newHumanDetection = false;
+        }
+        else {
+            newHumanDetection = true;
+        }
+    }
+    else if (oldOperationMode == EOperationMode::HumanDetectionA) {
+        if (newOperationMode == EOperationMode::HumanDetectionB) {
+            newHumanDetection = !UserModeControl::getInstance().humanDetection;
+        }
+    }
+    else if (oldOperationMode == EOperationMode::HumanDetectionB) {
+        if (newOperationMode == EOperationMode::HumanDetectionA) {
+            newHumanDetection = !UserModeControl::getInstance().humanDetection;
+        }
+    }
+
+    UserModeControl::getInstance().humanDetection = newHumanDetection;
+
+    if (oldInteractionMode != newInteractionMode
+        || oldHumanDetection != newHumanDetection
+        || !newHumanDetection) {
+        disableAllTask();
+    }
 
     auto *dataN = new NeoPixelMsgData();
     dataN->lightEffect = LightEffect();
     dataN->events = ENeoPixelMQEvent::UPDATE_MODE;
-    dataN->mode = newLightMode;
+    dataN->mode = Util::stringToELightMode(data["lightMode"]);
 
     NeoPixelTask::getInstance().sendMsg(dataN);
 
@@ -144,37 +201,18 @@ void processUserMode(const JsonObject &data) {
 
     AudioTask::getInstance().sendMsg(dataA);
 
-    EOperationMode oldOperationMode = UserModeControl::getInstance().operationMode;
-    EOperationMode newOperationMode = Util::stringToEOperationMode(data["operationMode"]);
-    UserModeControl::getInstance().operationMode = newOperationMode;
-
-    if (oldOperationMode == EOperationMode::Default
-        && oldOperationMode != newOperationMode) {
-        UserModeControl::getInstance().humanDetection = false;
-    }
-    else if (oldOperationMode == EOperationMode::HumanDetectionB
-             && newOperationMode == EOperationMode::HumanDetectionA) {
-        UserModeControl::getInstance().humanDetection = !UserModeControl::getInstance().humanDetection;
-    }
-    else if (oldOperationMode == EOperationMode::HumanDetectionA
-             && newOperationMode == EOperationMode::HumanDetectionB) {
-        UserModeControl::getInstance().humanDetection = !UserModeControl::getInstance().humanDetection;
-    }
-    else if (newOperationMode == EOperationMode::Default) {
-        UserModeControl::getInstance().humanDetection = true;
+    if (newHumanDetection) {
+        if (oldInteractionMode != newInteractionMode || oldHumanDetection != newHumanDetection) {
+            handleInteractionMode();
+        }
     }
 
-    UserModeControl::getInstance().operationMode = newOperationMode;
-
-    EInteractionMode oldInteractionMode = UserModeControl::getInstance().interactionMode;
-    EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
-    UserModeControl::getInstance().interactionMode = newInteractionMode;
-
-    if (newInteractionMode == EInteractionMode::PingPong) {
-        updatePinPong(oldLightMode != newLightMode);
-        return;
-    }
-    updateWithoutPingPong();
+    Serial.println("oldInteractionMode : " + String((int) oldInteractionMode));
+    Serial.println("newInteractionMode : " + String((int) newInteractionMode));
+    Serial.println("oldOperationMode : " + String((int) oldOperationMode));
+    Serial.println("newOperationMode : " + String((int) newOperationMode));
+    Serial.println("oldHumanDetection : " + String(oldHumanDetection));
+    Serial.println("newHumanDetection : " + String(newHumanDetection));
 }
 
 void processPlayList(const JsonObject &data) {
@@ -487,12 +525,6 @@ void handleAudioFileMsg(bool status, AudioFileMsgData *msg) {
     }
     else {
         AudioTask::getInstance().setIsSDAccessing(false);
-        if (UserModeControl::getInstance().interactionMode == EInteractionMode::PingPong) {
-            updatePinPong(true);
-        }
-        else {
-            updateWithoutPingPong();
-        }
 
         delete msg;
     }
@@ -507,7 +539,6 @@ void loop() {
         if (msg != nullptr) {
             AudioTask::getInstance().setIsSDAccessing(true);
             if (msg->event == EAudioFileEvent::DOWNLOAD) {
-
                 String protocol = ssl ? "https://" : "http://";
                 int id = msg->id;
                 String filename = msg->filename;

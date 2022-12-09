@@ -10,7 +10,7 @@ class PingPongTask : public Singleton<PingPongTask> {
 public:
     PingPongTask();
 
-    void sendMsg(PingPongMsgData *dataS);
+    void sendMsg(PingPongMsgData *dataP);
 
     void task();
 
