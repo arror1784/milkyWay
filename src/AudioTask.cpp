@@ -1,6 +1,6 @@
 #include "AudioTask.h"
 
-AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30), _pingPongMsgQueue(30) {
+AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30) {
     _audioControl.setVolume(_volume);
 }
 
@@ -26,7 +26,7 @@ void AudioTask::task() {
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
             Serial.println("EAudioMQEvent::UPDATE_PLAYLIST");
             bool status = _audioControl.setPlayList(msg->list);
-            if(status) {
+            if (status) {
                 _shouldChangeSound = true;
             }
             handlePlayStatus(status);
@@ -35,14 +35,12 @@ void AudioTask::task() {
             Serial.println("EAudioMQEvent::UPDATE_ENABLE");
             Serial.println("_isEnabled : " + String(msg->enable));
             _isEnabled = msg->enable;
-            _isPingPong = msg->isPingPong;
             handlePlayStatus(true);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
             Serial.println("EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
             _audioControl.pause();
             _shouldChangeSound = true;
-            _nextTick = 0xFFFFFFFF;
         }
 
         delete msg;
@@ -74,33 +72,10 @@ void AudioTask::task() {
             NeoPixelTask::getInstance().sendSyncMsg(dataN);
         }
     }
-
-    if (_isPingPong && _nextTick <= millis()) {
-        auto *dataP = new PingPongMsgData();
-
-        dataP->events = EPingPongMQEvent::FINISH_SOUND;
-        dataP->enable = true;
-
-        _pingPongMsgQueue.send(dataP);
-
-        _isPingPong = false;
-        _isEnabled = false;
-        setNextTick(0xFFFFFFFF);
-
-        _audioControl.pause();
-    }
-}
-
-PingPongMsgData *AudioTask::getPingPongMsg() {
-    return _pingPongMsgQueue.recv();
 }
 
 void AudioTask::setIsSDAccessing(bool isSDAccessing) {
     _audioControl.setIsSDAccessing(isSDAccessing);
-}
-
-void AudioTask::setNextTick(unsigned long tick) {
-    _nextTick = tick;
 }
 
 void AudioTask::handlePlayStatus(bool status) {
@@ -115,14 +90,10 @@ void AudioTask::handlePlayStatus(bool status) {
             _shouldChangeSound = false;
             _audioControl.play();
         }
-        if (_isPingPong) {
-            _nextTick = millis() + _pingPongAudioTIme;
-        }
     }
     else {
         Serial.println("pause run");
         _audioControl.pause();
-        _nextTick = 0xFFFFFFFF;
     }
 }
 

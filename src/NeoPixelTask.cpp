@@ -1,7 +1,6 @@
 #include "NeoPixelTask.h"
 
-NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _pingPongMsgQueue(30),
-                               _msgQueue(30), _syncMsgQueue(30) {
+NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ800), _msgQueue(30), _syncMsgQueue(30) {
     _defaultBreathingLightEffect = {
         .id = 0,
         .colorSets{},
@@ -50,10 +49,6 @@ NeoPixelTask::NeoPixelTask() : _neoPixel(LED_LENGTH, LED_PIN, NEO_GRBW | NEO_KHZ
     }
 
     _neoPixel.off();
-}
-
-PingPongMsgData *NeoPixelTask::getPingPongMsg() {
-    return _pingPongMsgQueue.recv();
 }
 
 void NeoPixelTask::sendMsg(NeoPixelMsgData *dataN) {
@@ -170,7 +165,6 @@ void NeoPixelTask::task() {
             Serial.println("_isEnabled : " + String(msg->enable));
             _isEnabled = msg->enable;
             if (_isEnabled) {
-                _isPingPong = msg->isPingPong;
                 setCurrentLightEffect(_mode);
 
                 refreshColorSet(true);
@@ -201,9 +195,6 @@ void NeoPixelTask::task() {
 }
 
 void NeoPixelTask::applyEvent() {
-    if (_isPingPong) {
-        _count = _oneCycleCount;
-    }
     if (_isEnabled && !getCurrentColorSet().empty()) {
         Serial.println("applyEvent");
         refreshSpeed();
@@ -283,42 +274,29 @@ void NeoPixelTask::sync() {
 }
 
 void NeoPixelTask::finishCycle() {
-    if (_count == -1) {
-        if (_mode == ELightMode::Mixed) {
-            setCurrentLightEffect(_mode);
+    if (_mode == ELightMode::Mixed) {
+        setCurrentLightEffect(_mode);
 
-            refreshColorSet(true);
-            refreshSpeed();
-            refreshNextTick();
+        refreshColorSet(true);
+        refreshSpeed();
+        refreshNextTick();
 
-            Serial.println("_speed : " + String(_speed));
-        }
+        Serial.println("_speed : " + String(_speed));
     }
-    else if (_isPingPong) {
-        if (_count > 1) {
-            _count -= 1;
-        }
-        else if (_count == 1) {
-            auto dataP = new PingPongMsgData();
 
-            dataP->enable = true;
-            dataP->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
+    auto dataP = new PingPongMsgData();
 
-            _isEnabled = false;
+    dataP->enable = true;
+    dataP->events = EPingPongMQEvent::FINISH_NEO_PIXEL;
 
-            _pingPongMsgQueue.send(dataP);
+    _isEnabled = false;
 
-            _count = -1;
-
-            reset();
-        }
-    }
+    PingPongMsgQueue::getInstance().send(dataP);
 }
 
 void NeoPixelTask::reset() {
     _neoPixel.off();
     _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-    _isPingPong = false;
     _nextTick = 0xFFFFFFFF;
 }
 

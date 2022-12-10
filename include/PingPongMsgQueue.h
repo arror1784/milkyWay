@@ -6,7 +6,6 @@
 #include "Util.h"
 
 enum class EPingPongMQEvent {
-    FINISH_SOUND,
     FINISH_NEO_PIXEL,
     UPDATE_ENABLE
 };
@@ -19,8 +18,14 @@ public:
 
 class PingPongMsgQueue : public MsgQueue<PingPongMsgData> {
 public:
-    PingPongMsgQueue(int length) : MsgQueue(length, sizeof(PingPongMsgData *)) {
+    PingPongMsgQueue(int length) : MsgQueue(length, sizeof(PingPongMsgData *)) {}
+
+    static PingPongMsgQueue &getInstance() {
+        return instance_;
     }
+
+private:
+    static PingPongMsgQueue instance_;
 };
 
 #endif //MILKYWAY_PING_PONG_MSG_QUEUE_H

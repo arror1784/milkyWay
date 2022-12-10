@@ -21,8 +21,6 @@ public:
 
     void handlePlayStatus(bool status = true);
 
-    PingPongMsgData *getPingPongMsg();
-
     void setIsSDAccessing(bool isSDAccessing);
 
     const Sound &getCurrentSound();
@@ -30,21 +28,15 @@ public:
     void setShouldChangeSound(bool shouldChangeSound);
 
 private:
-    void setNextTick(unsigned long tick);
-
     bool _isEnabled = false;
     int _volume = 10;  // 0...21
     std::vector<int> _gains;
     TickType_t _tick = xTaskGetTickCount();
-    bool _isPingPong = false;
-    unsigned long _nextTick = 0xFFFFFFFF;
     bool _shouldChangeSound = true;
 
     AudioMsgQueue _msgQueue;
-    PingPongMsgQueue _pingPongMsgQueue;
     AudioControl _audioControl;
 
-    const long _pingPongAudioTIme = 5500;
     const int _syncUpdateResolution = 10;
 };
 

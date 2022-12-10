@@ -56,7 +56,7 @@ void disableAllTask() {
 
     AudioTask::getInstance().sendMsg(dataA);
     NeoPixelTask::getInstance().sendMsg(dataN);
-    PingPongTask::getInstance().sendMsg(dataP);
+    PingPongMsgQueue::getInstance().send(dataP);
 }
 
 void handleInteractionMode() {
@@ -97,7 +97,7 @@ void handleInteractionMode() {
         delete dataP;
     }
     else { // EInteractionMode::Synchronization == EInteractionMode::PingPong
-        PingPongTask::getInstance().sendMsg(dataP);
+        PingPongMsgQueue::getInstance().send(dataP);
 
         delete dataN;
         delete dataA;

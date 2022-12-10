@@ -22,11 +22,11 @@ public:
     ELightMode mode;
     bool enable = true;
     uint8_t sync = 0;
-    bool isPingPong = false;
 };
 
 class NeoPixelMsgQueue : public MsgQueue<NeoPixelMsgData> {
 public:
     NeoPixelMsgQueue(int length) : MsgQueue(length, sizeof(NeoPixelMsgData *)) {}
 };
+
 #endif //MILKYWAY_NEOPIXELMSGQUEUE_H

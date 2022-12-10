@@ -15,8 +15,6 @@ class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
     NeoPixelTask();
 
-    PingPongMsgData *getPingPongMsg();
-
     void sendMsg(NeoPixelMsgData *dataN);
 
     void sendSyncMsg(NeoPixelMsgData *dataN);
@@ -62,15 +60,10 @@ private:
     uint8_t _sync = 0;
     bool _isSyncMode = false;
     NeoPixel _neoPixel;
-    bool _isPingPong = false;
     bool _isEnabled = false;
-
-    // -1일 경우 무한 반복
-    int _count = -1;
 
     NeoPixelMsgQueue _msgQueue;
     NeoPixelMsgQueue _syncMsgQueue;
-    PingPongMsgQueue _pingPongMsgQueue;
 
     LightEffect *_currentLightEffect;
 
@@ -93,8 +86,6 @@ private:
     const std::vector<unsigned int> _blinkingSpeeds{
         500, 1000, 1500, 2000, 2500, 3000, 5000
     };
-
-    const int _oneCycleCount = 4;
 };
 
 #endif //MILKYWAY_NEOPIXEL_TASK_H
