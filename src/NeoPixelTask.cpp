@@ -185,6 +185,7 @@ void NeoPixelTask::task() {
         if (msg->events == ENeoPixelMQEvent::UPDATE_SYNC) {
             _isSyncMode = msg->enable;
             _sync = msg->sync;
+            _speed = 24;
         }
         delete msg;
     }
