@@ -45,7 +45,7 @@ void PingPongTask::task() {
 
         switch (_status) {
             case EPingPongStatus::SLEEP:
-                _nextTick = _pingPongSleepTIme;
+                _nextTick = millis() + _pingPongSleepTIme;
 
                 delete dataA;
                 delete dataN;
@@ -62,6 +62,7 @@ void PingPongTask::task() {
                 break;
             case EPingPongStatus::NEO_PIXEL:
                 _neoPixelCount = _neoPixelCountCycle;
+                _nextTick = 0xFFFFFFFF;
 
                 dataA->enable = false;
                 dataN->enable = true;
