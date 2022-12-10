@@ -17,7 +17,7 @@ public:
 private:
     unsigned long _nextTick = 0xFFFFFFFF;
     EPingPongStatus _status = EPingPongStatus::SLEEP;
-    EPingPongStatus _nextStatus = EPingPongStatus::SLEEP;
+    EPingPongStatus _lastStatus = EPingPongStatus::SLEEP;
     bool _isEnabled = false;
     int _neoPixelCount = 0;
 

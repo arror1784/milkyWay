@@ -208,7 +208,7 @@ void processUserMode(const JsonObject &data) {
 
     auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
-    dataA->events = EAudioMQEvent::UPDATE_VOLUME;
+    dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
     dataA->isShuffle = data["soundShuffle"];
     dataA->volume = data["volume"];
 
@@ -436,7 +436,7 @@ void receiveSerial() {
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
-    EepromControl::getInstance().setWifiPsk("Wim", "Wim12345!");
+    //EepromControl::getInstance().setWifiPsk("Wim", "Wim12345!");
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);

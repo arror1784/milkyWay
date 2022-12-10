@@ -242,7 +242,7 @@ bool NeoPixelTask::breath() {
             refreshColorSet();
         }
         refreshSpeed();
-        refreshNextTick();
+        // refreshNextTick();
 
         Serial.println("_speed : " + String(_speed));
         return true;
@@ -334,8 +334,8 @@ void NeoPixelTask::refreshSpeed() {
             break;
         case ELightMode::Breathing:
         case ELightMode::ColorChange:
-            _speed = (_currentLightEffect->isRandomSpeed
-                      ? _breathingSpeeds[random(_breathingSpeeds.size())] : _currentLightEffect->speed) /
+            _speed = ((_currentLightEffect->isRandomSpeed
+                      ? _breathingSpeeds[random(_breathingSpeeds.size())] : _currentLightEffect->speed)) /
                      _neoPixel.getMaxBrightness();
             break;
         default:

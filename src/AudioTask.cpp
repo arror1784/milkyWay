@@ -17,8 +17,8 @@ void AudioTask::task() {
         return;
     }
     if (msg != nullptr) {
-        if (msg->events == EAudioMQEvent::UPDATE_VOLUME) {
-            Serial.println("EAudioMQEvent::UPDATE_VOLUME");
+        if (msg->events == EAudioMQEvent::UPDATE_VOLUME_SHUFFLE) {
+            Serial.println("EAudioMQEvent::UPDATE_VOLUME_SHUFFLE");
             _audioControl.setVolume(msg->volume);
             _audioControl.setIsShuffle(msg->isShuffle);
             handlePlayStatus(true);

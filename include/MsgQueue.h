@@ -1,6 +1,8 @@
 #ifndef MILKYWAY_MSG_QUEUE_CLIENT_H
 #define MILKYWAY_MSG_QUEUE_CLIENT_H
 
+#include <Arduino.h>
+
 #include <memory>
 #include <optional>
 
@@ -27,7 +29,11 @@ public:
     }
 	
     void send(const T* data){
-        xQueueSend( _queueHandler, &data, 0);
+        BaseType_t xStatus = xQueueSend( _queueHandler, &data, 0);
+        if(xStatus != pdTRUE){
+            delete data;
+            Serial.println("MSGQUEUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE SEND FAIL" );
+        }
     }
 
 private:
