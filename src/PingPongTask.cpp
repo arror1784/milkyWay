@@ -14,9 +14,9 @@ void PingPongTask::task() {
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
                 AudioTask::getInstance().sendMsg(dataA);
 
-                _nextTick = millis() + _pingPongAudioTIme;
                 _status = EPingPongStatus::SLEEP;
                 _nextStatus = EPingPongStatus::NEO_PIXEL;
+                _nextTick = millis() + _pingPongAudioTIme;
             }
             else {
                 _nextTick = 0xFFFFFFFF;
@@ -27,8 +27,7 @@ void PingPongTask::task() {
             if (_isEnabled) {
                 _neoPixelCount -= 1;
                 if (_neoPixelCount == 0) {
-                    _status = EPingPongStatus::SLEEP;
-                    _nextStatus = EPingPongStatus::AUDIO;
+                    _status = EPingPongStatus::AUDIO;
                     _nextTick = millis() + _pingPongSleepTIme;
                 }
             }
