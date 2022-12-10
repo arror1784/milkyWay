@@ -190,6 +190,15 @@ void processUserMode(const JsonObject &data) {
         disableAllTask();
     }
 
+    if (oldInteractionMode == EInteractionMode::Synchronization
+        && newInteractionMode != EInteractionMode::Synchronization) {
+        auto *dataN = new NeoPixelMsgData();
+        dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
+        dataN->enable = false;
+
+        NeoPixelTask::getInstance().sendSyncMsg(dataN);
+    }
+
     auto *dataN = new NeoPixelMsgData();
     dataN->lightEffect = LightEffect();
     dataN->events = ENeoPixelMQEvent::UPDATE_MODE;
