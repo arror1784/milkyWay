@@ -270,6 +270,13 @@ void processLightEffects(const JsonArray &array) {
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
+
+    auto *dataN = new NeoPixelMsgData();
+
+    dataN->events = ENeoPixelMQEvent::UPDATE_MODE;
+    dataN->mode = ELightMode::None;
+
+    NeoPixelTask::getInstance().sendMsg(dataN);
 }
 
 void processSendSound(const JsonObject &data) {
