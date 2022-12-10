@@ -350,9 +350,12 @@ void NeoPixelTask::refreshNextTick() {
 }
 
 const std::vector<ColorSet> &NeoPixelTask::getCurrentColorSet() {
+
     if (_currentLightEffect->isRandomColor) {
         if (_currentLightEffect->mode == ELightMode::Breathing) return _defaultBreathingLightEffect.colorSets;
         if (_currentLightEffect->mode == ELightMode::Blinking) return _defaultBlinkingLightEffect.colorSets;
+        if (_currentLightEffect->mode == ELightMode::ColorChange) return _defaultColorChangeLightEffect.colorSets;
+
     }
 
     return _currentLightEffect->colorSets;

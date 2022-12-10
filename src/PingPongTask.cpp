@@ -27,7 +27,6 @@ void PingPongTask::task() {
             if (_isEnabled) {
                 _neoPixelCount -= 1;
                 if (_neoPixelCount == 0) {
-                    Serial.println("EPingPongMQEvent::FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFuck");
 
                     _status = EPingPongStatus::SLEEP;
                     _nextTick = 0;
