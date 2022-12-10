@@ -13,6 +13,7 @@ void PingPongTask::task() {
                 auto *dataA = new AudioMsgData();
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
                 AudioTask::getInstance().sendMsg(dataA);
+
                 _nextTick = millis() + _pingPongAudioTIme;
                 _status = EPingPongStatus::SLEEP;
                 _nextStatus = EPingPongStatus::NEO_PIXEL;
@@ -36,28 +37,39 @@ void PingPongTask::task() {
     }
 
     if (_nextTick <= millis()) {
-        AudioMsgData *dataA;
-        NeoPixelMsgData *dataN;
+        auto *dataA = new AudioMsgData();
+        dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+
+        auto *dataN = new NeoPixelMsgData();
+        dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+
         switch (_status) {
             case EPingPongStatus::SLEEP:
                 _nextTick = _pingPongSleepTIme;
+
+                delete dataA;
+                delete dataN;
+
                 break;
             case EPingPongStatus::AUDIO:
                 _nextTick = millis() + _pingPongAudioTIme;
-                dataA = new AudioMsgData();
-                dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+
                 dataA->enable = true;
+                dataN->enable = false;
+
                 AudioTask::getInstance().sendMsg(dataA);
+                NeoPixelTask::getInstance().sendMsg(dataN);
                 break;
             case EPingPongStatus::NEO_PIXEL:
                 _neoPixelCount = _neoPixelCountCycle;
-                dataN = new NeoPixelMsgData();
-                dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+
+                dataA->enable = false;
                 dataN->enable = true;
+
+                AudioTask::getInstance().sendMsg(dataA);
                 NeoPixelTask::getInstance().sendMsg(dataN);
                 break;
         }
         _status = _nextStatus;
-        _nextStatus = EPingPongStatus::SLEEP;
     }
 }
