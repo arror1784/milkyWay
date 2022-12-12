@@ -34,6 +34,8 @@ WebServer webServer(80);
 
 bool isConnectToWifiWithAPI = false;
 
+int wifiConnectCount = 0;
+
 void disableAllTask() {
     Serial.println("disableAllTask");
 
@@ -114,10 +116,10 @@ void processHumanDetection(const JsonObject &data) {
         newHumanDetection = true;
     }
     else if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
-        newHumanDetection = !data["isDetected"];
+        newHumanDetection = data["isDetected"];
     }
     else {
-        newHumanDetection = data["isDetected"];
+        newHumanDetection = !data["isDetected"];
     }
 
     if (newHumanDetection != oldHumanDetection) {
@@ -165,10 +167,10 @@ void processUserMode(const JsonObject &data) {
     else if (oldOperationMode == EOperationMode::Default ||
              oldOperationMode == EOperationMode::N) {
         if (newOperationMode == EOperationMode::HumanDetectionA) {
-            newHumanDetection = false;
+            newHumanDetection = true;
         }
         else {
-            newHumanDetection = true;
+            newHumanDetection = false;
         }
     }
     else if (oldOperationMode == EOperationMode::HumanDetectionA) {
@@ -380,7 +382,7 @@ void receiveWifi() {
         bool status = false;
 
         for (int i = 0; i < 3; i++) {
-            if (connectWifi() == true) {
+            if (connectWifi()) {
                 status = true;
                 break;
             }
@@ -401,6 +403,8 @@ void receiveWifi() {
         WifiModule::getInstance().stop();
 
         wsClient.connect();
+
+        wifiConnectCount = 0;
     }
     else {
         isConnectToWifiWithAPI = false;
@@ -574,13 +578,20 @@ void loop() {
         }
     }
     else {
-        if (connectWifi()) {
-            delay(1000);
-            WifiModule::getInstance().stop();
-            wsClient.connect();
-        }
-        else {
-            WifiModule::getInstance().start();
+        if (wifiConnectCount < 5) {
+            if (connectWifi()) {
+                delay(1000);
+                WifiModule::getInstance().stop();
+                wsClient.connect();
+            }
+            else {
+                wifiConnectCount += 1;
+                Serial.println("wifiConnectCount : " + String(wifiConnectCount));
+
+                if (wifiConnectCount == 5) {
+                    WifiModule::getInstance().start();
+                }
+            }
         }
     }
 }
