@@ -239,7 +239,8 @@ bool NeoPixelTask::breath() {
     }
     else if (brightness == 0) {
         _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-        if (_currentLightEffect->mode == ELightMode::ColorChange) {
+        if (_currentLightEffect->mode == ELightMode::ColorChange
+            || _currentLightEffect->isRandomColor) {
             refreshColorSet();
         }
         refreshSpeed();
@@ -255,6 +256,10 @@ bool NeoPixelTask::breath() {
 bool NeoPixelTask::blink() {
     if (_neoPixel.isOn()) {
         _neoPixel.off();
+
+        if (_currentLightEffect->isRandomColor) {
+            refreshColorSet();
+        }
         refreshSpeed();
         refreshNextTick();
 
@@ -336,7 +341,7 @@ void NeoPixelTask::refreshSpeed() {
         case ELightMode::Breathing:
         case ELightMode::ColorChange:
             _speed = ((_currentLightEffect->isRandomSpeed
-                      ? _breathingSpeeds[random(_breathingSpeeds.size())] : _currentLightEffect->speed)) /
+                       ? _breathingSpeeds[random(_breathingSpeeds.size())] : _currentLightEffect->speed)) /
                      _neoPixel.getMaxBrightness();
             break;
         default:
@@ -350,12 +355,9 @@ void NeoPixelTask::refreshNextTick() {
 }
 
 const std::vector<ColorSet> &NeoPixelTask::getCurrentColorSet() {
-
     if (_currentLightEffect->isRandomColor) {
         if (_currentLightEffect->mode == ELightMode::Breathing) return _defaultBreathingLightEffect.colorSets;
         if (_currentLightEffect->mode == ELightMode::Blinking) return _defaultBlinkingLightEffect.colorSets;
-        if (_currentLightEffect->mode == ELightMode::ColorChange) return _defaultColorChangeLightEffect.colorSets;
-
     }
 
     return _currentLightEffect->colorSets;
