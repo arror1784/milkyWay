@@ -11,7 +11,7 @@ void AudioControl::setVolume(uint8_t volume) {
     _audio.setVolume(volume);
 }
 
-void AudioControl::setPlayList(Playlist &list) {
+bool AudioControl::setPlayList(Playlist &list) {
     bool isSamePlaylist = true;
 
     if (list.sounds.size() == _playList.sounds.size()) {
@@ -30,46 +30,50 @@ void AudioControl::setPlayList(Playlist &list) {
         isSamePlaylist = false;
     }
 
-    if (isSamePlaylist) return;
+    if (isSamePlaylist) return false;
 
     _playList = list;
-    _listIndex = 0;
 
-    _audio.stopSong();
-
-    if(_playList.sounds.empty()) return;
-
-    playNext();
-
-    if (!_isResume) {
-        _audio.pauseResume();
-    }
+    return true;
 }
 
 void AudioControl::pause() {
+    if (!isValidPlaylist()) return;
     if (_isResume) {
+        Serial.println("pause");
         _isResume = false;
         _audio.pauseResume();
     }
 }
 
 void AudioControl::resume() {
+    if (!isValidPlaylist()) return;
     if (!_isResume) {
+        Serial.println("resume");
         _isResume = true;
         _audio.pauseResume();
     }
 };
 
-void AudioControl::playNext() {
-    if (_playList.sounds.empty()) return;
-
-    if (_playList.isShuffle) {
+void AudioControl::updatePlaylistIndex() {
+    Serial.println("updatePlaylistIndex");
+    if (_isShuffle) {
         _listIndex = random((long) _playList.sounds.size());
     }
     else {
         _listIndex++;
         if (_listIndex >= _playList.sounds.size()) _listIndex = 0;
     }
+}
+
+void AudioControl::play() {
+    _audio.stopSong();
+
+    if (!isValidPlaylist()) return;
+
+    Serial.println("play");
+    _isResume = true;
+    updatePlaylistIndex();
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
 }
 
@@ -81,14 +85,26 @@ int16_t AudioControl::getLastGain() {
     return _audio.getLastGain();
 }
 
+const Sound &AudioControl::getCurrentSound() {
+    return _playList.sounds[_listIndex];
+}
+
 bool AudioControl::isPlaying() {
     return _isResume;
 }
 
-bool AudioControl::isDownloading() {
+bool AudioControl::isSDAccessing() {
     return _isSDAccessing;
 }
 
 void AudioControl::setIsSDAccessing(bool isSDAccessing) {
     _isSDAccessing = isSDAccessing;
+}
+
+bool AudioControl::isValidPlaylist() {
+    return !_playList.sounds.empty();
+}
+
+void AudioControl::setIsShuffle(bool isShuffle) {
+    _isShuffle = isShuffle;
 }

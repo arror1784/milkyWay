@@ -2,11 +2,12 @@
 #define MILKYWAY_WEB_SOCKET_CLIENT_H
 
 #include "Singleton.h"
-#include "WebSocketsClient.h"
 #include "NeoPixel.h"
 #include "SDUtil.h"
 #include "AudioControl.h"
 
+#include <SocketIOclient.h>
+#include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 #include <WString.h>
 #include <functional>
@@ -49,7 +50,6 @@ public:
     static Playlist parsePlayList(const JsonObject &data) {
         Playlist playlist;
         playlist.id = data["id"];
-        playlist.isShuffle = data["isShuffle"];
         playlist.sounds.clear();
         for (auto jsonSound: JsonArray(data["sounds"])) {
             Sound sound;

@@ -1,7 +1,7 @@
 #ifndef MILKYWAY_NEOPIXEL_TASK_H
 #define MILKYWAY_NEOPIXEL_TASK_H
 
-#include "ShuffleMsgQueue.h"
+#include "PingPongMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "NeoPixel.h"
 #include "UserModeControl.h"
@@ -15,17 +15,21 @@ class NeoPixelTask : public Singleton<NeoPixelTask> {
 public:
     NeoPixelTask();
 
-    ShuffleMsgData *getShuffleMsg();
-
     void sendMsg(NeoPixelMsgData *dataN);
 
-    void updateCustomLightEffect(const LightEffect &lightEffect);
+    void sendSyncMsg(NeoPixelMsgData *dataN);
 
-    void setCurrentLightEffect(ELightMode mode);
+    bool updateCustomLightEffect(const LightEffect &lightEffect);
+
+    bool setCurrentLightEffect(ELightMode mode);
 
     void task();
 
+    ELightMode getCurrentMode();
+
 private:
+    void applyEvent();
+
     void ticked();
 
     // breath 기능 중 싸이클이 끝날때마다 true를 반환합니다.
@@ -40,11 +44,13 @@ private:
 
     void reset();
 
-    void refreshColorSet();
+    void refreshColorSet(bool shouldResetColorIndexes = false);
 
     void refreshSpeed();
 
     void refreshNextTick();
+
+    const std::vector<ColorSet> &getCurrentColorSet();
 
     ELightMode _mode = ELightMode::None;
 
@@ -54,14 +60,10 @@ private:
     uint8_t _sync = 0;
     bool _isSyncMode = false;
     NeoPixel _neoPixel;
-    bool _isShuffle = false;
     bool _isEnabled = false;
 
-    // -1일 경우 무한 반복
-    int _count = -1;
-
     NeoPixelMsgQueue _msgQueue;
-    ShuffleMsgQueue _shuffleMsgQueue;
+    NeoPixelMsgQueue _syncMsgQueue;
 
     LightEffect *_currentLightEffect;
 
@@ -84,8 +86,6 @@ private:
     const std::vector<unsigned int> _blinkingSpeeds{
         500, 1000, 1500, 2000, 2500, 3000, 5000
     };
-
-    const int _oneCycleCount = 4;
 };
 
 #endif //MILKYWAY_NEOPIXEL_TASK_H

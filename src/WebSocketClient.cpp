@@ -26,6 +26,7 @@ WebSocketClient::WebSocketClient() {
 }
 
 void WebSocketClient::connect() {
+//    _client.setExtraHeaders(_extraHeader.c_str());
     if (_withSSL) {
         _client.beginSSL(_host.c_str(), _port, "/socket");
     }

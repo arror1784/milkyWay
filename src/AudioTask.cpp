@@ -1,6 +1,6 @@
 #include "AudioTask.h"
 
-AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30), _shuffleMsgQueue(30) {
+AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30) {
     _audioControl.setVolume(_volume);
 }
 
@@ -11,39 +11,43 @@ void AudioTask::sendMsg(AudioMsgData *dataA) {
 void AudioTask::task() {
     AudioMsgData *msg = _msgQueue.recv();
 
-    if (_audioControl.isDownloading()) {
+    if (_audioControl.isSDAccessing()) {
         if (msg != nullptr) delete msg;
 
         return;
     }
     if (msg != nullptr) {
-        if (msg->events == EAudioMQEvent::UPDATE_VOLUME) {
+        if (msg->events == EAudioMQEvent::UPDATE_VOLUME_SHUFFLE) {
+            Serial.println("EAudioMQEvent::UPDATE_VOLUME_SHUFFLE");
             _audioControl.setVolume(msg->volume);
+            _audioControl.setIsShuffle(msg->isShuffle);
+            handlePlayStatus(true);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
-            auto &list = msg->list;
-            _audioControl.setPlayList(list);
+            Serial.println("EAudioMQEvent::UPDATE_PLAYLIST");
+            bool status = _audioControl.setPlayList(msg->list);
+            if (status) {
+                _shouldChangeSound = true;
+            }
+            handlePlayStatus(status);
         }
-        else if (msg->events == EAudioMQEvent::UPDATE_ENABLE && _isEnabled != msg->enable) {
+        else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
+            Serial.println("EAudioMQEvent::UPDATE_ENABLE");
+            Serial.println("_isEnabled : " + String(msg->enable));
             _isEnabled = msg->enable;
-            if (_isEnabled) {
-                _audioControl.resume();
-                _isShuffle = msg->isShuffle;
-
-                if (_isShuffle) {
-                    _nextTick = millis() + _shuffleAudioTIme;
-                }
-            }
-            else {
-                _audioControl.pause();
-            }
+            handlePlayStatus(true);
+        }
+        else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
+            Serial.println("EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
+            _audioControl.pause();
+            _shouldChangeSound = true;
         }
 
         delete msg;
     }
     _audioControl.loop();
 
-    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization) {
+    if (UserModeControl::getInstance().interactionMode == EInteractionMode::Synchronization && _isEnabled) {
         if (_syncUpdateResolution < pdTICKS_TO_MS(xTaskGetTickCount() - _tick)) {
             auto gain = std::abs(_audioControl.getLastGain()) / _volume;
 
@@ -65,39 +69,40 @@ void AudioTask::task() {
 
             dataN->sync = total / _gains.size();
 
-            NeoPixelTask::getInstance().sendMsg(dataN);
+            NeoPixelTask::getInstance().sendSyncMsg(dataN);
         }
     }
+}
 
-    if (_isShuffle && _nextTick <= millis()) {
-        auto *dataS = new ShuffleMsgData();
+void AudioTask::setIsSDAccessing(bool isSDAccessing) {
+    _audioControl.setIsSDAccessing(isSDAccessing);
+}
 
-        dataS->events = EShuffleSMQEvent::FINISH_SOUND;
-        dataS->enable = true;
-
-        _shuffleMsgQueue.send(dataS);
-
-        _isShuffle = false;
-        setNextTick(0xFFFFFFFF);
-
+void AudioTask::handlePlayStatus(bool status) {
+    Serial.println("handlePlayStatus");
+    if (_isEnabled && status) {
+        if (!_shouldChangeSound) {
+            Serial.println("resume run");
+            _audioControl.resume();
+        }
+        else {
+            Serial.println("play run");
+            _shouldChangeSound = false;
+            _audioControl.play();
+        }
+    }
+    else {
+        Serial.println("pause run");
         _audioControl.pause();
     }
 }
 
-ShuffleMsgData *AudioTask::getShuffleMsg() {
-    return _shuffleMsgQueue.recv();
+const Sound &AudioTask::getCurrentSound() {
+    return _audioControl.getCurrentSound();
 }
 
-void AudioTask::setIsSDAccessing(bool isDownloading) {
-    _audioControl.setIsSDAccessing(isDownloading);
-}
-
-void AudioTask::setNextTick(unsigned long tick) {
-    _nextTick = tick;
-}
-
-void AudioTask::playNext() {
-    _audioControl.playNext();
+void AudioTask::setShouldChangeSound(bool shouldChangeSound) {
+    _shouldChangeSound = shouldChangeSound;
 }
 
 void audio_info(const char *info) {
@@ -108,5 +113,6 @@ void audio_info(const char *info) {
 void audio_eof_mp3(const char *info) {  //end of file
     Serial.print("eof_mp3     ");
     Serial.println(info);
-    AudioTask::getInstance().playNext();
+    AudioTask::getInstance().setShouldChangeSound(true);
+    AudioTask::getInstance().handlePlayStatus(true);
 }

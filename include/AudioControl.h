@@ -12,40 +12,48 @@ public:
 class Playlist {
 public:
     long id;
-    bool isShuffle;
     std::vector<Sound> sounds;
 };
 
 class AudioControl {
-
 public:
     AudioControl(int lrcPin, int blckPin, int doutPin);
 
     void setVolume(uint8_t volume);
 
-    void setPlayList(Playlist &list);
+    bool setPlayList(Playlist &list);
 
     void pause();
 
     void resume();
 
-    void playNext();
+    void updatePlaylistIndex();
+
+    void play();
 
     void loop();
 
     int16_t getLastGain();
 
+    const Sound &getCurrentSound();
+
     bool isPlaying();
 
-    bool isDownloading();
+    bool isSDAccessing();
 
-    void setIsSDAccessing(bool isDownloading);
+    void setIsSDAccessing(bool isSDAccessing);
+
+    void setIsShuffle(bool isShuffle);
 
 private:
+
+    bool isValidPlaylist();
+
     Audio _audio;
 
     int _listIndex = 1;
 
+    bool _isShuffle = false;
     bool _isResume = true;
     bool _isSDAccessing = false;
 

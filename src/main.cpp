@@ -11,7 +11,7 @@
 #include "EepromControl.h"
 
 #include "AudioFileMsgQueue.h"
-#include "ShuffleTask.h"
+#include "PingPongTask.h"
 #include "NeoPixelTask.h"
 #include "AudioTask.h"
 
@@ -19,18 +19,188 @@
 //static const int port = 6001;
 //static const bool ssl = false;
 
-static const String host = "kira-api.wimcorp.dev";
-static const int port = 443;
-static const bool ssl = true;
+static const String host = "13.125.102.123";
+static const int port = 11002;
+static const bool ssl = false;
 
-AudioFileMsgQueue audioFileMsgQueue(20);
+//static const String host = "kira-api.wimcorp.dev";
+//static const int port = 443;
+//static const bool ssl = true;
+
+AudioFileMsgQueue audioFileMsgQueue(30);
 
 WebSocketClient wsClient;
 WebServer webServer(80);
 
 bool isConnectToWifiWithAPI = false;
 
+int wifiConnectCount = 0;
+
+void disableAllTask() {
+    Serial.println("disableAllTask");
+
+    // 오디오 비활성화
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+    dataA->enable = false;
+
+    // 네오픽셀 비활성화
+    auto *dataN = new NeoPixelMsgData();
+    dataN->lightEffect = LightEffect();
+    dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+    dataN->enable = false;
+
+    // 핑퐁 비활성화
+    auto *dataP = new PingPongMsgData();
+    dataP->events = EPingPongMQEvent::UPDATE_ENABLE;
+    dataP->enable = false;
+
+    AudioTask::getInstance().sendMsg(dataA);
+    NeoPixelTask::getInstance().sendMsg(dataN);
+    PingPongMsgQueue::getInstance().send(dataP);
+}
+
+void handleInteractionMode() {
+    Serial.println("handleInteractionMode");
+    auto interactionMode = UserModeControl::getInstance().interactionMode;
+
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = EAudioMQEvent::UPDATE_ENABLE;
+    dataA->enable = true;
+
+    auto *dataN = new NeoPixelMsgData();
+    dataN->lightEffect = LightEffect();
+    dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
+    dataN->mode = ELightMode::None;
+    dataN->enable = true;
+
+    auto *dataP = new PingPongMsgData();
+    dataP->events = EPingPongMQEvent::UPDATE_ENABLE;
+    dataP->enable = true;
+
+    if (EInteractionMode::LightOnly == interactionMode) {
+        NeoPixelTask::getInstance().sendMsg(dataN);
+
+        delete dataA;
+        delete dataP;
+    }
+    else if (EInteractionMode::SoundOnly == interactionMode) {
+        AudioTask::getInstance().sendMsg(dataA);
+
+        delete dataN;
+        delete dataP;
+    }
+    else if (EInteractionMode::Synchronization == interactionMode) {
+        NeoPixelTask::getInstance().sendMsg(dataN);
+        AudioTask::getInstance().sendMsg(dataA);
+
+        delete dataP;
+    }
+    else { // EInteractionMode::Synchronization == EInteractionMode::PingPong
+        PingPongMsgQueue::getInstance().send(dataP);
+
+        delete dataN;
+        delete dataA;
+    }
+}
+
+void processHumanDetection(const JsonObject &data) {
+//    Serial.println("processHumanDetection");
+
+    bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
+    bool newHumanDetection;
+
+    if (UserModeControl::getInstance().operationMode == EOperationMode::Default) {
+        newHumanDetection = true;
+    }
+    else if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
+        newHumanDetection = data["isDetected"];
+    }
+    else {
+        newHumanDetection = !data["isDetected"];
+    }
+
+    if (newHumanDetection != oldHumanDetection) {
+        disableAllTask();
+        if (newHumanDetection) {
+            handleInteractionMode();
+        }
+    }
+    UserModeControl::getInstance().humanDetection = newHumanDetection;
+
+//    Serial.println("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
+}
+
 void processUserMode(const JsonObject &data) {
+    Serial.println("processUserMode");
+
+    EOperationMode oldOperationMode = UserModeControl::getInstance().operationMode;
+    EOperationMode newOperationMode = Util::stringToEOperationMode(data["operationMode"]);
+    UserModeControl::getInstance().operationMode = newOperationMode;
+
+    EInteractionMode oldInteractionMode = UserModeControl::getInstance().interactionMode;
+    EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
+    UserModeControl::getInstance().interactionMode = newInteractionMode;
+
+    bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
+    bool newHumanDetection = oldHumanDetection;
+
+    /*
+     * D -> D = true
+     * D -> A = false
+     * D -> B = true
+     *
+     * A -> D = true
+     * A -> A = 유지
+     * A -> B = 반전
+     *
+     * B -> D = true
+     * B -> A = 반전
+     * B -> B = 유지
+    **/
+
+    if (newOperationMode == EOperationMode::Default) {
+        newHumanDetection = true;
+    }
+    else if (oldOperationMode == EOperationMode::Default ||
+             oldOperationMode == EOperationMode::N) {
+        if (newOperationMode == EOperationMode::HumanDetectionA) {
+            newHumanDetection = true;
+        }
+        else {
+            newHumanDetection = false;
+        }
+    }
+    else if (oldOperationMode == EOperationMode::HumanDetectionA) {
+        if (newOperationMode == EOperationMode::HumanDetectionB) {
+            newHumanDetection = !UserModeControl::getInstance().humanDetection;
+        }
+    }
+    else if (oldOperationMode == EOperationMode::HumanDetectionB) {
+        if (newOperationMode == EOperationMode::HumanDetectionA) {
+            newHumanDetection = !UserModeControl::getInstance().humanDetection;
+        }
+    }
+
+    UserModeControl::getInstance().humanDetection = newHumanDetection;
+
+    if (oldInteractionMode != newInteractionMode
+        || oldHumanDetection != newHumanDetection
+        || !newHumanDetection) {
+        disableAllTask();
+    }
+
+    if (oldInteractionMode == EInteractionMode::Synchronization
+        && newInteractionMode != EInteractionMode::Synchronization) {
+        auto *dataN = new NeoPixelMsgData();
+        dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
+        dataN->enable = false;
+
+        NeoPixelTask::getInstance().sendSyncMsg(dataN);
+    }
+
     auto *dataN = new NeoPixelMsgData();
     dataN->lightEffect = LightEffect();
     dataN->events = ENeoPixelMQEvent::UPDATE_MODE;
@@ -40,65 +210,24 @@ void processUserMode(const JsonObject &data) {
 
     auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
-    dataA->events = EAudioMQEvent::UPDATE_VOLUME;
+    dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
+    dataA->isShuffle = data["soundShuffle"];
     dataA->volume = data["volume"];
 
     AudioTask::getInstance().sendMsg(dataA);
 
-    EInteractionMode newInteractionMode = Util::stringToEInteractionMode(data["interactionMode"]);
-
-    if (newInteractionMode == EInteractionMode::Shuffle) {
-        auto *dataS = new ShuffleMsgData();
-        dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
-        dataS->enable = true;
-
-        ShuffleTask::getInstance().sendMsg(dataS);
-    }
-    else {
-        dataA = new AudioMsgData();
-        dataA->list = Playlist();
-        dataA->events = EAudioMQEvent::UPDATE_ENABLE;
-        dataA->enable = false;
-
-        dataN = new NeoPixelMsgData();
-        dataN->lightEffect = LightEffect();
-        dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
-        dataN->mode = ELightMode::None;
-        dataN->enable = false;
-
-        if (newInteractionMode == EInteractionMode::LightOnly) {
-            dataN->enable = true;
-            dataA->enable = false;
+    if (newHumanDetection) {
+        if (oldInteractionMode != newInteractionMode || oldHumanDetection != newHumanDetection) {
+            handleInteractionMode();
         }
-        else if (newInteractionMode == EInteractionMode::SoundOnly) {
-            dataN->enable = false;
-            dataA->enable = true;
-        }
-        else if (newInteractionMode == EInteractionMode::Synchronization) {
-            dataN->enable = true;
-            dataA->enable = true;
-        }
-
-        AudioTask::getInstance().sendMsg(dataA);
-        NeoPixelTask::getInstance().sendMsg(dataN);
     }
 
-    if (newInteractionMode != UserModeControl::getInstance().interactionMode) {
-        dataN = new NeoPixelMsgData();
-        dataN->lightEffect = LightEffect();
-        dataN->events = ENeoPixelMQEvent::UPDATE_SYNC;
-
-        if (newInteractionMode == EInteractionMode::Synchronization) {
-            dataN->enable = true;
-        }
-        else {
-            dataN->enable = false;
-        }
-
-        NeoPixelTask::getInstance().sendMsg(dataN);
-    }
-
-    UserModeControl::getInstance().interactionMode = newInteractionMode;
+    Serial.println("oldInteractionMode : " + String((int) oldInteractionMode));
+    Serial.println("newInteractionMode : " + String((int) newInteractionMode));
+    Serial.println("oldOperationMode : " + String((int) oldOperationMode));
+    Serial.println("newOperationMode : " + String((int) newOperationMode));
+    Serial.println("oldHumanDetection : " + String(oldHumanDetection));
+    Serial.println("newHumanDetection : " + String(newHumanDetection));
 }
 
 void processPlayList(const JsonObject &data) {
@@ -133,7 +262,6 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::Blinking;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
@@ -142,7 +270,6 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::Breathing;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
@@ -151,62 +278,16 @@ void processLightEffects(const JsonArray &array) {
 
         dataN->lightEffect.mode = ELightMode::ColorChange;
         dataN->events = ENeoPixelMQEvent::UPDATE_EFFECT;
-        dataN->mode = ELightMode::None;
 
         NeoPixelTask::getInstance().sendMsg(dataN);
     }
-}
 
-void processHumanDetection(const JsonObject &data) {
-    if (UserModeControl::getInstance().operationMode != EOperationMode::Default) {
-        if (UserModeControl::getInstance().operationMode == EOperationMode::HumanDetectionB) {
-            UserModeControl::getInstance().humanDetection = !data["isDetected"];
-        }
-        else {
-            UserModeControl::getInstance().humanDetection = data["isDetected"];
-        }
+    auto *dataN = new NeoPixelMsgData();
 
-        auto *dataA = new AudioMsgData();
-        dataA->list = Playlist();
-        dataA->events = EAudioMQEvent::UPDATE_ENABLE;
-        dataA->enable = false;
+    dataN->events = ENeoPixelMQEvent::UPDATE_MODE;
+    dataN->mode = ELightMode::None;
 
-        auto *dataN = new NeoPixelMsgData();
-        dataN->lightEffect = LightEffect();
-        dataN->events = ENeoPixelMQEvent::UPDATE_ENABLE;
-        dataN->mode = ELightMode::None;
-        dataN->enable = false;
-
-        auto *dataS = new ShuffleMsgData();
-        dataS->events = EShuffleSMQEvent::UPDATE_ENABLE;
-        dataS->enable = false;
-
-        if (UserModeControl::getInstance().humanDetection) {
-            switch (UserModeControl::getInstance().interactionMode) {
-                case EInteractionMode::LightOnly :
-                    dataN->enable = true;
-                    dataA->enable = false;
-                    break;
-                case EInteractionMode::SoundOnly :
-                    dataN->enable = false;
-                    dataA->enable = true;
-                    break;
-                case EInteractionMode::Shuffle :
-                    dataS->enable = true;
-                    break;
-                case EInteractionMode::Synchronization :
-                    dataN->enable = true;
-                    dataA->enable = true;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        AudioTask::getInstance().sendMsg(dataA);
-        NeoPixelTask::getInstance().sendMsg(dataN);
-        ShuffleTask::getInstance().sendMsg(dataS);
-    }
+    NeoPixelTask::getInstance().sendMsg(dataN);
 }
 
 void processSendSound(const JsonObject &data) {
@@ -237,13 +318,14 @@ void processSendDeletedSound(const JsonObject &data) {
     audioFileMsg->id = data["id"];
     audioFileMsg->filename = String(data["filename"]);
 
-    audioFileMsgQueue.send(audioFileMsg);
-}
+    if (audioFileMsg->id == AudioTask::getInstance().getCurrentSound().id) {
+        auto *dataA = new AudioMsgData();
+        dataA->events = EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND;
 
-void processReset() {
-    EepromControl::getInstance().setWifiPsk("", "");
-    WifiModule::getInstance().disconnectWifi();
-    WifiModule::getInstance().start();
+        AudioTask::getInstance().sendMsg(dataA);
+    }
+
+    audioFileMsgQueue.send(audioFileMsg);
 }
 
 void processPing() {
@@ -286,11 +368,12 @@ void receiveWifi() {
     DynamicJsonDocument doc(plainBody.length() * 2);
     deserializeJson(doc, plainBody);
 
-    if (doc.containsKey("ssid") && doc.containsKey("password")) {
+    if (doc.containsKey("ssid") && doc.containsKey("password"), doc.containsKey("token")) {
         String strPayload;
 
         serializeJson(doc, strPayload);
 
+        SDUtil::authenticationToken_ = String(doc["token"]);
         EepromControl::getInstance().setWifiPsk(doc["ssid"], doc["password"]);
 
         Serial.println(EepromControl::getInstance().getWifiSsid());
@@ -299,13 +382,14 @@ void receiveWifi() {
         bool status = false;
 
         for (int i = 0; i < 3; i++) {
-            if (connectWifi() == true) {
+            if (connectWifi()) {
                 status = true;
                 break;
             }
         }
 
         if (!status) {
+            EepromControl::getInstance().setWifiPsk("", "");
             isConnectToWifiWithAPI = false;
 
             webServer.send(400, "text/plain", "network connect fail");
@@ -314,11 +398,13 @@ void receiveWifi() {
 
         isConnectToWifiWithAPI = false;
         webServer.send(200);
-
         delay(5000);
 
         WifiModule::getInstance().stop();
+
         wsClient.connect();
+
+        wifiConnectCount = 0;
     }
     else {
         isConnectToWifiWithAPI = false;
@@ -354,6 +440,7 @@ void receiveSerial() {
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
+    //EepromControl::getInstance().setWifiPsk("Wim", "Wim12345!");
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
@@ -380,6 +467,7 @@ void setup() {
         json["name"] = EepromControl::getInstance().getSerial();
         Serial.println(String(json["name"]));
         json["type"] = "Mirror";
+        json["token"] = SDUtil::authenticationToken_;
 
         String strJson;
         serializeJson(json, strJson);
@@ -393,15 +481,24 @@ void setup() {
         DynamicJsonDocument doc(length * 2);
         deserializeJson(doc, payload, length);
 
-        if (doc["event"] != "Ping") {
+        if(doc["event"] != "SendHumanDetection") {
             String strJson;
             serializeJson(doc, strJson);
-
             Serial.println(strJson);
         }
 
         if (doc.containsKey("authenticationToken")) {
-            SDUtil::authenticationToken_ = String(doc["authenticationToken"]);
+            String token = String(doc["authenticationToken"]);
+
+            if (token.isEmpty()) {
+                wsClient.disconnect();
+                EepromControl::getInstance().setWifiPsk("", "");
+                WifiModule::getInstance().start();
+
+                return;
+            }
+
+            SDUtil::authenticationToken_ = token;
         }
         else if (doc["event"] == "SendLightEffect") {
             processLightEffects(doc["data"]);
@@ -424,9 +521,6 @@ void setup() {
         else if (doc["event"] == "SendDeletedSound") {
             processSendDeletedSound(doc["data"]);
         }
-        else if (doc["event"] == "Reset") {
-            processReset();
-        }
     });
     wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
         processPing();
@@ -436,18 +530,30 @@ void setup() {
         Serial.println("websocket errorReceived");
     });
 
+
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { NeoPixelTask::getInstance().task(); }
         vTaskDelete(nullptr);
     }, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
-        while (1) { ShuffleTask::getInstance().task(); }
+        while (1) { PingPongTask::getInstance().task(); }
         vTaskDelete(nullptr);
-    }, "shuffleTask", 5000, nullptr, 0, nullptr, 0);
+    }, "pingPongTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { AudioTask::getInstance().task(); }
         vTaskDelete(nullptr);
     }, "audioTask", 10000, nullptr, 1, nullptr, 1);
+}
+
+void handleAudioFileMsg(bool status, AudioFileMsgData *msg) {
+    if (!status) {
+        audioFileMsgQueue.send(msg);
+    }
+    else {
+        AudioTask::getInstance().setIsSDAccessing(false);
+
+        delete msg;
+    }
 }
 
 void loop() {
@@ -459,7 +565,6 @@ void loop() {
         if (msg != nullptr) {
             AudioTask::getInstance().setIsSDAccessing(true);
             if (msg->event == EAudioFileEvent::DOWNLOAD) {
-
                 String protocol = ssl ? "https://" : "http://";
                 int id = msg->id;
                 String filename = msg->filename;
@@ -467,37 +572,31 @@ void loop() {
 
                 bool status = SDUtil::downloadFile(url, id, filename);
 
-                if (!status) {
-                    audioFileMsgQueue.send(msg);
-                }
-                else {
-                    AudioTask::getInstance().setIsSDAccessing(false);
-
-                    delete msg;
-                }
-            } else if (msg->event == EAudioFileEvent::DELETE) {
+                handleAudioFileMsg(status, msg);
+            }
+            else if (msg->event == EAudioFileEvent::DELETE) {
                 AudioTask::getInstance().setIsSDAccessing(true);
                 bool status = SDUtil::deleteFile(msg->filename);
 
-                if (!status) {
-                    audioFileMsgQueue.send(msg);
-                }
-                else {
-                    AudioTask::getInstance().setIsSDAccessing(false);
-
-                    delete msg;
-                }
+                handleAudioFileMsg(status, msg);
             }
         }
     }
     else {
-        if (connectWifi()) {
-            delay(1000);
-            WifiModule::getInstance().stop();
-            wsClient.connect();
-        }
-        else {
-            WifiModule::getInstance().start();
+        if (wifiConnectCount < 5) {
+            if (connectWifi()) {
+                delay(1000);
+                WifiModule::getInstance().stop();
+                wsClient.connect();
+            }
+            else {
+                wifiConnectCount += 1;
+                Serial.println("wifiConnectCount : " + String(wifiConnectCount));
+
+                if (wifiConnectCount == 5) {
+                    WifiModule::getInstance().start();
+                }
+            }
         }
     }
 }
