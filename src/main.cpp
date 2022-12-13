@@ -107,7 +107,7 @@ void handleInteractionMode() {
 }
 
 void processHumanDetection(const JsonObject &data) {
-    Serial.println("processHumanDetection");
+//    Serial.println("processHumanDetection");
 
     bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
     bool newHumanDetection;
@@ -130,7 +130,7 @@ void processHumanDetection(const JsonObject &data) {
     }
     UserModeControl::getInstance().humanDetection = newHumanDetection;
 
-    Serial.println("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
+//    Serial.println("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
 }
 
 void processUserMode(const JsonObject &data) {
@@ -478,9 +478,14 @@ void setup() {
         Serial.println("websocket disconnected");
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
-        Serial.println(String(payload, length));
         DynamicJsonDocument doc(length * 2);
         deserializeJson(doc, payload, length);
+
+        if(doc["event"] != "SendHumanDetection") {
+            String strJson;
+            serializeJson(doc, strJson);
+            Serial.println(strJson);
+        }
 
         if (doc.containsKey("authenticationToken")) {
             String token = String(doc["authenticationToken"]);
