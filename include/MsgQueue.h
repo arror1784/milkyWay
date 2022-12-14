@@ -32,7 +32,6 @@ public:
         BaseType_t xStatus = xQueueSend( _queueHandler, &data, 0);
         if(xStatus != pdTRUE){
             delete data;
-            Serial.println("MSGQUEUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE SEND FAIL" );
         }
     }
 

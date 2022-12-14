@@ -40,7 +40,7 @@ bool AudioControl::setPlayList(Playlist &list) {
 void AudioControl::pause() {
     if (!isValidPlaylist()) return;
     if (_isResume) {
-        Serial.println("pause");
+        Serial.println("AudioControl::pause : pause");
         _isResume = false;
         _audio.pauseResume();
     }
@@ -49,14 +49,14 @@ void AudioControl::pause() {
 void AudioControl::resume() {
     if (!isValidPlaylist()) return;
     if (!_isResume) {
-        Serial.println("resume");
+        Serial.println("AudioControl::resume : resume");
         _isResume = true;
         _audio.pauseResume();
     }
 };
 
 void AudioControl::updatePlaylistIndex() {
-    Serial.println("updatePlaylistIndex");
+    Serial.println("AudioControl::updatePlaylistIndex : updatePlaylistIndex");
     if (_isShuffle) {
         _listIndex = random((long) _playList.sounds.size());
     }
@@ -71,7 +71,7 @@ void AudioControl::play() {
 
     if (!isValidPlaylist()) return;
 
-    Serial.println("play");
+    Serial.println("AudioControl::play : play");
     _isResume = true;
     updatePlaylistIndex();
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());

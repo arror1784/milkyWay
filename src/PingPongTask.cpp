@@ -7,8 +7,7 @@ void PingPongTask::task() {
         if (msg->events == EPingPongMQEvent::UPDATE_ENABLE) {
             _isEnabled = msg->enable;
             if (_isEnabled) {
-                Serial.println("EPingPongMQEvent::UPDATE_ENABLE");
-                Serial.println("_isEnabled : " + String(msg->enable));
+                Serial.println("PingPongTask::task : EPingPongMQEvent::UPDATE_ENABLE" + String(msg->enable));
 
                 auto *dataA = new AudioMsgData();
                 dataA->events = EAudioMQEvent::UPDATE_ENABLE;
@@ -23,7 +22,7 @@ void PingPongTask::task() {
             }
         }
         else if (msg->events == EPingPongMQEvent::FINISH_NEO_PIXEL) {
-            Serial.println("EPingPongMQEvent::FINISH_NEO_PIXEL");
+            Serial.println("PingPongTask::task : EPingPongMQEvent::FINISH_NEO_PIXEL");
             if (_isEnabled) {
                 _neoPixelCount -= 1;
                 if (_neoPixelCount == 0) {
