@@ -281,7 +281,6 @@ bool NeoPixelTask::blink() {
     if (_neoPixel.isOn()) {
         _neoPixel.off();
 
-        Serial.println("NeoPixelTask::blink : _speed : " + String(_speed));
         return true;
     }
     _neoPixel.on();
