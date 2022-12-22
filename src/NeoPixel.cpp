@@ -67,6 +67,7 @@ void NeoPixel::setBreathingStatus(EBreathingStatus status) {
 
 void NeoPixel::setLedCount(int ledCount) {
     _ledCount = ledCount;
+    _strip.updateLength(_ledCount);
 }
 
 int NeoPixel::getLedCount() {
