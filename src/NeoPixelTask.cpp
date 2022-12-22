@@ -111,7 +111,8 @@ bool NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
 
     Serial.println("NeoPixelTask::updateCustomLightEffect isChanged : " + String(isChanged));
     Serial.println("NeoPixelTask::updateCustomLightEffect mode : " + String((int) mode));
-    Serial.println("NeoPixelTask::updateCustomLightEffect _currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
+    Serial.println(
+        "NeoPixelTask::updateCustomLightEffect _currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
 
     return isChanged && mode == _currentLightEffect->mode;
 }
@@ -127,19 +128,31 @@ bool NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
             oldLightMode = _currentLightEffect->mode;
             _currentLightEffect = _breathingLightEffect.id == 0
                                   ? &_defaultBreathingLightEffect : &_breathingLightEffect;
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _breathingLightEffect.id : " + String(_breathingLightEffect.id));
+            Serial.println(
+                "NeoPixelTask::setCurrentLightEffect : _breathingLightEffect.id : " + String(_breathingLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
             return oldLightMode != _currentLightEffect->mode;
         case ELightMode::Blinking:
             oldLightMode = _currentLightEffect->mode;
             _currentLightEffect = _blinkingLightEffect.id == 0
                                   ? &_defaultBlinkingLightEffect : &_blinkingLightEffect;
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _blinkingLightEffect.id : " + String(_blinkingLightEffect.id));
+            Serial.println(
+                "NeoPixelTask::setCurrentLightEffect : _blinkingLightEffect.id : " + String(_blinkingLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
             return oldLightMode != _currentLightEffect->mode;
         case ELightMode::ColorChange:
             oldLightMode = _currentLightEffect->mode;
             _currentLightEffect = _colorChangeLightEffect.id == 0
                                   ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _colorChangeLightEffect.id : " + String(_colorChangeLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _colorChangeLightEffect.id : " +
+                           String(_colorChangeLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
             return oldLightMode != _currentLightEffect->mode;
         default:
             if (_lightEffectIndexes.empty()) {
@@ -182,6 +195,7 @@ void NeoPixelTask::task() {
         else if (msg->events == ENeoPixelMQEvent::UPDATE_ENABLE) {
             Serial.println("NeoPixelTask::task : ENeoPixelMQEvent::UPDATE_ENABLE : " + String(msg->enable));
             _isEnabled = msg->enable;
+            _count = msg->count;
             if (_isEnabled) {
                 setCurrentLightEffect(_mode);
 
@@ -215,8 +229,6 @@ void NeoPixelTask::task() {
 
 void NeoPixelTask::applyEvent() {
     Serial.println("NeoPixelTask::applyEvent : _isEnabled : " + String(_isEnabled));
-    Serial.println(
-        "NeoPixelTask::applyEvent : getCurrentColorSet().empty() : " + String(!getCurrentColorSet().empty()));
     if (_isEnabled && !getCurrentColorSet().empty()) {
         refreshSpeed();
         refreshNextTick();
@@ -254,38 +266,20 @@ bool NeoPixelTask::breath() {
     auto brightness = _neoPixel.getBrightness();
     auto maxBrightness = _neoPixel.getMaxBrightness();
 
+    if (brightness == 0) {
+        _neoPixel.setBreathingStatus(EBreathingStatus::UP);
+
+        return true;
+    }
     if (brightness == maxBrightness) {
         _neoPixel.setBreathingStatus(EBreathingStatus::DOWN);
     }
-    else if (brightness == 0) {
-        _neoPixel.setBreathingStatus(EBreathingStatus::UP);
-
-        if (_mode != ELightMode::Mixed) {
-            if (_currentLightEffect->mode == ELightMode::ColorChange
-                || _currentLightEffect->isRandomColor) {
-                refreshColorSet();
-            }
-            refreshSpeed();
-        }
-
-        Serial.println("NeoPixelTask::breath : _speed : " + String(_speed));
-        return true;
-    }
-    refreshNextTick();
     return false;
 }
 
 bool NeoPixelTask::blink() {
     if (_neoPixel.isOn()) {
         _neoPixel.off();
-
-        if (_mode != ELightMode::Mixed) {
-            if (_currentLightEffect->isRandomColor) {
-                refreshColorSet();
-            }
-            refreshSpeed();
-            refreshNextTick();
-        }
 
         Serial.println("NeoPixelTask::blink : _speed : " + String(_speed));
         return true;
@@ -304,15 +298,18 @@ void NeoPixelTask::sync() {
 }
 
 void NeoPixelTask::finishCycle() {
-    if (_mode == ELightMode::Mixed) {
+    if (_mode == ELightMode::Mixed && _count < 0) {
         setCurrentLightEffect(_mode);
 
         refreshColorSet(true);
-        refreshSpeed();
-        refreshNextTick();
-
-        Serial.println("NeoPixelTask::finishCycle _speed : " + String(_speed));
     }
+    else if (_currentLightEffect->mode == ELightMode::ColorChange) {
+        refreshColorSet(true);
+    }
+    refreshSpeed();
+    refreshNextTick();
+
+    Serial.println("NeoPixelTask::finishCycle _speed : " + String(_speed));
 
     auto dataP = new PingPongMsgData();
 

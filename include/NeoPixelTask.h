@@ -61,6 +61,7 @@ private:
     bool _isSyncMode = false;
     NeoPixel _neoPixel;
     bool _isEnabled = false;
+    int _count = -1;
 
     NeoPixelMsgQueue _msgQueue;
     NeoPixelMsgQueue _syncMsgQueue;

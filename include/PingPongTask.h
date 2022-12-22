@@ -19,7 +19,7 @@ private:
     EPingPongStatus _status = EPingPongStatus::SLEEP;
     EPingPongStatus _lastStatus = EPingPongStatus::SLEEP;
     bool _isEnabled = false;
-    int _neoPixelCount = 0;
+    int _neoPixelCount = -1;
 
     const int _neoPixelCountCycle = 4;
     const long _pingPongSleepTIme = 1500;

@@ -22,6 +22,7 @@ public:
     ELightMode mode;
     bool enable = true;
     uint8_t sync = 0;
+    int count = -1;
 };
 
 class NeoPixelMsgQueue : public MsgQueue<NeoPixelMsgData> {

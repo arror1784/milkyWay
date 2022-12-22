@@ -29,7 +29,7 @@ void PingPongTask::task() {
 
                     _status = EPingPongStatus::SLEEP;
                     _nextTick = 0;
-
+                    _neoPixelCount = -1;
                 }
             }
         }
@@ -76,6 +76,7 @@ void PingPongTask::task() {
 
                 dataA->enable = false;
                 dataN->enable = true;
+                dataN->count = _neoPixelCount;
 
                 _status = EPingPongStatus::SLEEP;
 
