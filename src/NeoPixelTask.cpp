@@ -59,115 +59,6 @@ void NeoPixelTask::sendSyncMsg(NeoPixelMsgData *dataN) {
     _syncMsgQueue.send(dataN);
 }
 
-bool NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
-    Serial.println("NeoPixelTask::updateCustomLightEffect lightEffect id : " + String(lightEffect.id));
-    bool isChanged = false;
-    ELightMode mode = lightEffect.mode;
-
-    LightEffect *oldLightEffect;
-
-    if (mode == ELightMode::Breathing) oldLightEffect = &_breathingLightEffect;
-    if (mode == ELightMode::Blinking) oldLightEffect = &_blinkingLightEffect;
-    if (mode == ELightMode::ColorChange) oldLightEffect = &_colorChangeLightEffect;
-
-    if (lightEffect.isRandomSpeed != oldLightEffect->isRandomSpeed) isChanged = true;
-    else if (lightEffect.isRandomColor != oldLightEffect->isRandomColor) isChanged = true;
-    else if (lightEffect.speed != oldLightEffect->speed) isChanged = true;
-    else if (lightEffect.colorSets.size() != oldLightEffect->colorSets.size()) isChanged = true;
-    else {
-        for (int i = 0; i < lightEffect.colorSets.size(); i++) {
-            const ColorSet &colorSet = lightEffect.colorSets[i];
-            const ColorSet &oldColorSet = oldLightEffect->colorSets[i];
-            for (int j = 0; j < colorSet.colors.size(); j++) {
-                if (colorSet.colors[j] != oldColorSet.colors[j]) {
-                    isChanged = true;
-                    break;
-                }
-                if (isChanged) {
-                    break;
-                }
-            }
-        }
-    }
-
-    if (mode == ELightMode::Breathing) {
-        if (lightEffect.id == 0)
-            _breathingLightEffect = _defaultBreathingLightEffect;
-        else
-            _breathingLightEffect = lightEffect;
-    }
-    if (mode == ELightMode::Blinking) {
-        if (lightEffect.id == 0)
-            _blinkingLightEffect = _defaultBlinkingLightEffect;
-        else
-            _blinkingLightEffect = lightEffect;
-    }
-    if (mode == ELightMode::ColorChange) {
-        if (lightEffect.id == 0)
-            _colorChangeLightEffect = _defaultColorChangeLightEffect;
-        else
-            _colorChangeLightEffect = lightEffect;
-    }
-
-    Serial.println("NeoPixelTask::updateCustomLightEffect isChanged : " + String(isChanged));
-    Serial.println("NeoPixelTask::updateCustomLightEffect mode : " + String((int) mode));
-    Serial.println(
-        "NeoPixelTask::updateCustomLightEffect _currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
-
-    return isChanged && mode == _currentLightEffect->mode;
-}
-
-// 현재 조명효과를 모드를 기반으로 바꾼다.
-bool NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
-    ELightMode oldLightMode;
-    switch (mode) {
-        case ELightMode::None:
-            setCurrentLightEffect(_currentLightEffect->mode);
-            return true;
-        case ELightMode::Breathing:
-            oldLightMode = _currentLightEffect->mode;
-            _currentLightEffect = _breathingLightEffect.id == 0
-                                  ? &_defaultBreathingLightEffect : &_breathingLightEffect;
-            Serial.println(
-                "NeoPixelTask::setCurrentLightEffect : _breathingLightEffect.id : " + String(_breathingLightEffect.id));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
-                           String((int) _currentLightEffect->mode));
-            return oldLightMode != _currentLightEffect->mode;
-        case ELightMode::Blinking:
-            oldLightMode = _currentLightEffect->mode;
-            _currentLightEffect = _blinkingLightEffect.id == 0
-                                  ? &_defaultBlinkingLightEffect : &_blinkingLightEffect;
-            Serial.println(
-                "NeoPixelTask::setCurrentLightEffect : _blinkingLightEffect.id : " + String(_blinkingLightEffect.id));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
-                           String((int) _currentLightEffect->mode));
-            return oldLightMode != _currentLightEffect->mode;
-        case ELightMode::ColorChange:
-            oldLightMode = _currentLightEffect->mode;
-            _currentLightEffect = _colorChangeLightEffect.id == 0
-                                  ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _colorChangeLightEffect.id : " +
-                           String(_colorChangeLightEffect.id));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
-            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
-                           String((int) _currentLightEffect->mode));
-            return oldLightMode != _currentLightEffect->mode;
-        default:
-            if (_lightEffectIndexes.empty()) {
-                for (int i = 0; i < _lightEffectModeCount; i++) {
-                    _lightEffectIndexes.push_back(i);
-                }
-            }
-            long randomValue = random((long) _lightEffectIndexes.size());
-            int randomColorSetIndex = _lightEffectIndexes[randomValue];
-            _lightEffectIndexes.erase(_lightEffectIndexes.begin() + randomValue);
-
-            return setCurrentLightEffect((ELightMode) randomColorSetIndex);
-    }
-}
-
 void NeoPixelTask::task() {
     NeoPixelMsgData *msg = _msgQueue.recv();
 
@@ -225,6 +116,119 @@ void NeoPixelTask::task() {
     if (millis() >= _nextTick) {
         ticked();
     }
+}
+
+int NeoPixelTask::getLedCount() {
+    return _neoPixel.getLedCount();
+}
+
+// 현재 조명효과를 모드를 기반으로 바꾼다.
+bool NeoPixelTask::setCurrentLightEffect(ELightMode mode) {
+    ELightMode oldLightMode;
+    switch (mode) {
+        case ELightMode::None:
+            setCurrentLightEffect(_currentLightEffect->mode);
+            return true;
+        case ELightMode::Breathing:
+            oldLightMode = _currentLightEffect->mode;
+            _currentLightEffect = _breathingLightEffect.id == 0
+                                  ? &_defaultBreathingLightEffect : &_breathingLightEffect;
+            Serial.println(
+                "NeoPixelTask::setCurrentLightEffect : _breathingLightEffect.id : " + String(_breathingLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
+            return oldLightMode != _currentLightEffect->mode;
+        case ELightMode::Blinking:
+            oldLightMode = _currentLightEffect->mode;
+            _currentLightEffect = _blinkingLightEffect.id == 0
+                                  ? &_defaultBlinkingLightEffect : &_blinkingLightEffect;
+            Serial.println(
+                "NeoPixelTask::setCurrentLightEffect : _blinkingLightEffect.id : " + String(_blinkingLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
+            return oldLightMode != _currentLightEffect->mode;
+        case ELightMode::ColorChange:
+            oldLightMode = _currentLightEffect->mode;
+            _currentLightEffect = _colorChangeLightEffect.id == 0
+                                  ? &_defaultColorChangeLightEffect : &_colorChangeLightEffect;
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _colorChangeLightEffect.id : " +
+                           String(_colorChangeLightEffect.id));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : oldLightMode : " + String((int) oldLightMode));
+            Serial.println("NeoPixelTask::setCurrentLightEffect : _currentLightEffect->mode : " +
+                           String((int) _currentLightEffect->mode));
+            return oldLightMode != _currentLightEffect->mode;
+        default:
+            if (_lightEffectIndexes.empty()) {
+                for (int i = 0; i < _lightEffectModeCount; i++) {
+                    _lightEffectIndexes.push_back(i);
+                }
+            }
+            long randomValue = random((long) _lightEffectIndexes.size());
+            int randomColorSetIndex = _lightEffectIndexes[randomValue];
+            _lightEffectIndexes.erase(_lightEffectIndexes.begin() + randomValue);
+
+            return setCurrentLightEffect((ELightMode) randomColorSetIndex);
+    }
+}
+
+bool NeoPixelTask::updateCustomLightEffect(const LightEffect &lightEffect) {
+    Serial.println("NeoPixelTask::updateCustomLightEffect lightEffect id : " + String(lightEffect.id));
+    bool isChanged = false;
+    ELightMode mode = lightEffect.mode;
+
+    LightEffect *oldLightEffect;
+
+    if (mode == ELightMode::Breathing) oldLightEffect = &_breathingLightEffect;
+    if (mode == ELightMode::Blinking) oldLightEffect = &_blinkingLightEffect;
+    if (mode == ELightMode::ColorChange) oldLightEffect = &_colorChangeLightEffect;
+
+    if (lightEffect.isRandomSpeed != oldLightEffect->isRandomSpeed) isChanged = true;
+    else if (lightEffect.isRandomColor != oldLightEffect->isRandomColor) isChanged = true;
+    else if (lightEffect.speed != oldLightEffect->speed) isChanged = true;
+    else if (lightEffect.colorSets.size() != oldLightEffect->colorSets.size()) isChanged = true;
+    else {
+        for (int i = 0; i < lightEffect.colorSets.size(); i++) {
+            const ColorSet &colorSet = lightEffect.colorSets[i];
+            const ColorSet &oldColorSet = oldLightEffect->colorSets[i];
+            for (int j = 0; j < colorSet.colors.size(); j++) {
+                if (colorSet.colors[j] != oldColorSet.colors[j]) {
+                    isChanged = true;
+                    break;
+                }
+                if (isChanged) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (mode == ELightMode::Breathing) {
+        if (lightEffect.id == 0)
+            _breathingLightEffect = _defaultBreathingLightEffect;
+        else
+            _breathingLightEffect = lightEffect;
+    }
+    if (mode == ELightMode::Blinking) {
+        if (lightEffect.id == 0)
+            _blinkingLightEffect = _defaultBlinkingLightEffect;
+        else
+            _blinkingLightEffect = lightEffect;
+    }
+    if (mode == ELightMode::ColorChange) {
+        if (lightEffect.id == 0)
+            _colorChangeLightEffect = _defaultColorChangeLightEffect;
+        else
+            _colorChangeLightEffect = lightEffect;
+    }
+
+    Serial.println("NeoPixelTask::updateCustomLightEffect isChanged : " + String(isChanged));
+    Serial.println("NeoPixelTask::updateCustomLightEffect mode : " + String((int) mode));
+    Serial.println(
+        "NeoPixelTask::updateCustomLightEffect _currentLightEffect->mode : " + String((int) _currentLightEffect->mode));
+
+    return isChanged && mode == _currentLightEffect->mode;
 }
 
 void NeoPixelTask::applyEvent() {
@@ -394,8 +398,4 @@ const std::vector<ColorSet> &NeoPixelTask::getCurrentColorSet() {
 
     Serial.println("NeoPixelTask::getCurrentColorSet: _currentLightEffect");
     return _currentLightEffect->colorSets;
-}
-
-ELightMode NeoPixelTask::getCurrentMode() {
-    return _mode;
 }

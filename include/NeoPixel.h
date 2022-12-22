@@ -53,6 +53,8 @@ public:
 
     void setLedCount(int ledCount);
 
+    int getLedCount();
+
 private:
     void updatePixelColor();
 
@@ -61,9 +63,9 @@ private:
     ColorSet _colorSet;
     Adafruit_NeoPixel _strip;
 
-    int16_t pin_ = 32;
-    int ledCount_ = 50;
-    const uint8_t maxBright_ = 255;
+    int16_t _pin = 32;
+    int _ledCount = 50;
+    const uint8_t _maxBright = 255;
 };
 
 #endif //ESP32_LIB_NEOPIXEL_H

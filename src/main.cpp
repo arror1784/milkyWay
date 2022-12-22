@@ -458,6 +458,7 @@ void setup() {
         json["event"] = "registerDeviceSession";
         json["name"] = EepromControl::getInstance().getSerial();
         json["type"] = "Mirror";
+        json["ledCount"] = NeoPixelTask::getInstance().getLedCount();
         json["token"] = SDUtil::authenticationToken_;
 
         String strJson;

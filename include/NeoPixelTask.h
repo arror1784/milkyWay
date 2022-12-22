@@ -19,15 +19,15 @@ public:
 
     void sendSyncMsg(NeoPixelMsgData *dataN);
 
-    bool updateCustomLightEffect(const LightEffect &lightEffect);
-
-    bool setCurrentLightEffect(ELightMode mode);
-
     void task();
 
-    ELightMode getCurrentMode();
+    int getLedCount();
 
 private:
+    bool setCurrentLightEffect(ELightMode mode);
+
+    bool updateCustomLightEffect(const LightEffect &lightEffect);
+
     void applyEvent();
 
     void ticked();

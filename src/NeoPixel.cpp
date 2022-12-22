@@ -32,7 +32,7 @@ void NeoPixel::increaseBrightness() {
 }
 
 bool NeoPixel::isOn() const {
-    return _strip.getBrightness() == maxBright_;
+    return _strip.getBrightness() == _maxBright;
 }
 
 void NeoPixel::updatePixelColor() {
@@ -40,7 +40,7 @@ void NeoPixel::updatePixelColor() {
         _strip.setPixelColor(i, _colorSet.colors[i]);
     }
 
-    for (int i = (int) _colorSet.colors.size(); i < ledCount_; i++) {
+    for (int i = (int) _colorSet.colors.size(); i < _ledCount; i++) {
         _strip.setPixelColor(i, _colorSet.colors[_colorSet.colors.size() - 1]);
     }
 }
@@ -50,7 +50,7 @@ EBreathingStatus NeoPixel::getBreathingStatus() const {
 }
 
 uint8_t NeoPixel::getMaxBrightness() const {
-    return maxBright_;
+    return _maxBright;
 }
 
 uint8_t NeoPixel::getBrightness() const {
@@ -66,5 +66,9 @@ void NeoPixel::setBreathingStatus(EBreathingStatus status) {
 }
 
 void NeoPixel::setLedCount(int ledCount) {
-    ledCount_ = ledCount;
+    _ledCount = ledCount;
+}
+
+int NeoPixel::getLedCount() {
+    return _ledCount;
 }
