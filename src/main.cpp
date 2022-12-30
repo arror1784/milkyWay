@@ -212,7 +212,6 @@ void processUserMode(const JsonObject &data) {
     dataA->list = Playlist();
     dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
     dataA->isShuffle = data["soundShuffle"];
-    dataA->volume = data["volume"];
 
     AudioTask::getInstance().sendMsg(dataA);
 
@@ -221,6 +220,15 @@ void processUserMode(const JsonObject &data) {
             handleInteractionMode();
         }
     }
+}
+
+void processDeviceConfig(const JsonObject &data) {
+    auto *dataA = new AudioMsgData();
+    dataA->list = Playlist();
+    dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
+    dataA->volume = data["volume"];
+
+    AudioTask::getInstance().sendMsg(dataA);
 }
 
 void processPlayList(const JsonObject &data) {
@@ -432,7 +440,8 @@ void receiveSerial() {
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
-//    EepromControl::getInstance().setWifiPsk("", "");
+    EepromControl::getInstance().setSerial("Kira_Mirror_00001");
+    EepromControl::getInstance().setWifiPsk("", "");
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
@@ -503,6 +512,9 @@ void setup() {
         }
         else if (doc["event"] == "SendUserMode") {
             processUserMode(doc["data"]);
+        }
+        else if (doc["event"] == "SendConfig") {
+            processDeviceConfig(doc["data"]);
         }
         else if (doc["event"] == "SendHumanDetection") {
             processHumanDetection(doc["data"]);

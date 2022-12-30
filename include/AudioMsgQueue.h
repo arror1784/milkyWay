@@ -17,7 +17,7 @@ public:
     EAudioMQEvent events;
     bool enable = true;
     bool isShuffle = false;
-    int volume = 0;
+    int volume = -1;
 };
 
 class AudioMsgQueue : public MsgQueue<AudioMsgData> {
