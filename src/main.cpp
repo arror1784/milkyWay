@@ -531,10 +531,10 @@ void setup() {
     });
 
 
-    xTaskCreatePinnedToCore([](void *param) {
-        while (1) { NeoPixelTask::getInstance().task(); }
-        vTaskDelete(nullptr);
-    }, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
+//    xTaskCreatePinnedToCore([](void *param) {
+//        while (1) { NeoPixelTask::getInstance().task(); }
+//        vTaskDelete(nullptr);
+//    }, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { PingPongTask::getInstance().task(); }
         vTaskDelete(nullptr);
@@ -581,6 +581,8 @@ void loop() {
                 handleAudioFileMsg(status, msg);
             }
         }
+
+        NeoPixelTask::getInstance().task();
     }
     else {
         if (wifiConnectCount < 5) {

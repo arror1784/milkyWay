@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "d:/sources/JSH/milkyWay/.pio/build/esp32dev/firmware.elf",
+            "executable": "/Users/jax/source/milkyWay/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/1/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "/Users/jax/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,18 +25,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "d:/sources/JSH/milkyWay/.pio/build/esp32dev/firmware.elf",
+            "executable": "/Users/jax/source/milkyWay/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/1/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "/Users/jax/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "d:/sources/JSH/milkyWay/.pio/build/esp32dev/firmware.elf",
+            "executable": "/Users/jax/source/milkyWay/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/1/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "/Users/jax/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
