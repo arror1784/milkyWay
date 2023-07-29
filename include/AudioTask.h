@@ -21,6 +21,8 @@ public:
 
     void handlePlayStatus(bool status = true);
 
+    void setConfig(int volume, bool isShuffle);
+
     void setIsSDAccessing(bool isSDAccessing);
 
     const Sound &getCurrentSound();
@@ -32,6 +34,7 @@ private:
     int _volume = 10;  // 0...21
     std::vector<int> _gains;
     TickType_t _tick = xTaskGetTickCount();
+    TickType_t _cycleTick = 0;
     bool _shouldChangeSound = true;
 
     AudioMsgQueue _msgQueue;

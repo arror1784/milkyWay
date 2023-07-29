@@ -1,6 +1,7 @@
 #ifndef MILKYWAY_AUDIO_H
 #define MILKYWAY_AUDIO_H
 
+#include "SerialPrint.h"
 #include <Audio.h>
 
 class Sound {
@@ -19,7 +20,7 @@ class AudioControl {
 public:
     AudioControl(int lrcPin, int blckPin, int doutPin);
 
-    void setVolume(uint8_t volume);
+    bool setVolume(uint8_t volume);
 
     bool setPlayList(Playlist &list);
 
@@ -43,7 +44,7 @@ public:
 
     void setIsSDAccessing(bool isSDAccessing);
 
-    void setIsShuffle(bool isShuffle);
+    bool setIsShuffle(bool isShuffle);
 
 private:
 
@@ -51,7 +52,7 @@ private:
 
     Audio _audio;
 
-    int _listIndex = 1;
+    int _listIndex = 0;
 
     bool _isShuffle = false;
     bool _isResume = true;

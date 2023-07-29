@@ -4,15 +4,15 @@ void WifiModule::start() {
     if (_isOnApMode) return;
 
     _isOnApMode = true;
-    Serial.println();
-    Serial.print("Setting soft-AP configuration ... ");
-    Serial.println(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
+    SERIAL_PRINTLN("");
+    SERIAL_PRINT("Setting soft-AP configuration ... ");
+    SERIAL_PRINTLN(WiFi.softAPConfig(_localIP, _gateway, _subnet) ? "Ready" : "Failed!");
 
-    Serial.print("Setting soft-AP ... ");
-    Serial.println(WiFi.softAP(_ssid.c_str(), NULL) ? "Ready" : "Failed!");
+    SERIAL_PRINT("Setting soft-AP ... ");
+    SERIAL_PRINTLN(WiFi.softAP(_ssid.c_str(), NULL) ? "Ready" : "Failed!");
 
-    Serial.print("Soft-AP IP address = ");
-    Serial.println(WiFi.softAPIP());
+    SERIAL_PRINT("Soft-AP IP address = ");
+    SERIAL_PRINTLN(WiFi.softAPIP());
 }
 
 void WifiModule::stop() {
@@ -23,12 +23,12 @@ void WifiModule::stop() {
 String WifiModule::connectWifi(const String &ssid, const String &password) {
     WiFi.begin(ssid.c_str(), password.c_str());
     
-    Serial.println("try connect");
+    SERIAL_PRINTLN("try connect");
     for (int i = 0; i < 5; i++) {
         if (WiFiClass::status() == WL_CONNECTED) {
             break;
         }
-        Serial.println("Connecting to WiFi.." + String(i));
+        SERIAL_PRINTLN("Connecting to WiFi.." + String(i));
         delay(1000);
     }
 
@@ -42,7 +42,7 @@ String WifiModule::connectWifi(const String &ssid, const String &password) {
         case WL_SCAN_COMPLETED:
             return "WL_SCAN_COMPLETED";
         case WL_CONNECTED:
-            Serial.println(WiFi.localIP());
+            SERIAL_PRINTLN(WiFi.localIP());
             return "WL_CONNECTED";
         case WL_CONNECT_FAILED:
             return "WL_CONNECT_FAILED";
@@ -71,27 +71,27 @@ void WifiModule::setIp(const String &localIp, const String &gateway, const Strin
 std::vector<ApInfo> WifiModule::getApList() {
     std::vector<ApInfo> list;
 
-    Serial.println("** Scan Networks **");
+    SERIAL_PRINTLN("** Scan Networks **");
     int numSsid = WiFi.scanNetworks();
     if (numSsid == -1) {
-        Serial.println("Couldn't get a WiFi connection");
+        SERIAL_PRINTLN("Couldn't get a WiFi connection");
         return list;
     }
 
     // print the list of networks seen:
-    Serial.print("number of available networks:");
-    Serial.println(numSsid);
+    SERIAL_PRINT("number of available networks:");
+    SERIAL_PRINTLN(numSsid);
 
     // print the network number and name for each network found:
     for (int thisNet = 0; thisNet < numSsid; thisNet++) {
-        Serial.print(thisNet);
-        Serial.print(") ");
-        Serial.print(WiFi.SSID(thisNet));
-        Serial.print("\tSignal: ");
-        Serial.print(WiFi.RSSI(thisNet));
-        Serial.print(" dBm");
-        Serial.print("\tEncryption: ");
-        Serial.println(getEncryptionStr(WiFi.encryptionType(thisNet)).c_str());
+        SERIAL_PRINT(thisNet);
+        SERIAL_PRINT(") ");
+        SERIAL_PRINT(WiFi.SSID(thisNet));
+        SERIAL_PRINT("\tSignal: ");
+        SERIAL_PRINT(WiFi.RSSI(thisNet));
+        SERIAL_PRINT(" dBm");
+        SERIAL_PRINT("\tEncryption: ");
+        SERIAL_PRINTLN(getEncryptionStr(WiFi.encryptionType(thisNet)).c_str());
         list.push_back({WiFi.SSID(thisNet), WiFi.BSSIDstr(thisNet), WiFi.encryptionType(thisNet)});
     }
 

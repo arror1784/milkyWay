@@ -6,6 +6,7 @@
 #include <FS.h>
 #include <HTTPClient.h>
 
+#include "SerialPrint.h"
 #include "Singleton.h"
 #include "Util.h"
 

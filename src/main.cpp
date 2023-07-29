@@ -9,18 +9,20 @@
 #include "AudioControl.h"
 #include "NeoPixel.h"
 #include "EepromControl.h"
+#include "SerialPrint.h"
 
 #include "AudioFileMsgQueue.h"
 #include "PingPongTask.h"
 #include "NeoPixelTask.h"
 #include "AudioTask.h"
+#include "ToServerMsgQueue.h"
 
 //static const String host = "192.168.0.195";
 //static const int port = 6001;
 //static const bool ssl = false;
 
-static const String host = "13.125.102.123";
-static const int port = 11002;
+static const String host = "wim-jax.iptime.org";
+static const int port = 6001;
 static const bool ssl = false;
 
 //static const String host = "kira-api.wimcorp.dev";
@@ -37,7 +39,7 @@ bool isConnectToWifiWithAPI = false;
 int wifiConnectCount = 0;
 
 void disableAllTask() {
-    Serial.println("disableAllTask");
+    SERIAL_PRINTLN("disableAllTask");
 
     // 오디오 비활성화
     auto *dataA = new AudioMsgData();
@@ -62,7 +64,7 @@ void disableAllTask() {
 }
 
 void handleInteractionMode() {
-    Serial.println("handleInteractionMode");
+    SERIAL_PRINTLN("handleInteractionMode");
     auto interactionMode = UserModeControl::getInstance().interactionMode;
 
     auto *dataA = new AudioMsgData();
@@ -98,16 +100,20 @@ void handleInteractionMode() {
 
         delete dataP;
     }
-    else { // EInteractionMode::Synchronization == EInteractionMode::PingPong
+    else if (EInteractionMode::PingPong == interactionMode) {
         PingPongMsgQueue::getInstance().send(dataP);
 
         delete dataN;
         delete dataA;
+    } else { // EInteractionMode::N
+        delete dataN;
+        delete dataA;
+        delete dataP;
     }
 }
 
 void processHumanDetection(const JsonObject &data) {
-//    Serial.println("processHumanDetection");
+    SERIAL_PRINTLN("processHumanDetection");
 
     bool oldHumanDetection = UserModeControl::getInstance().humanDetection;
     bool newHumanDetection;
@@ -130,11 +136,11 @@ void processHumanDetection(const JsonObject &data) {
     }
     UserModeControl::getInstance().humanDetection = newHumanDetection;
 
-//    Serial.println("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
+//    SERIAL_PRINTLN("newHumanDetection : " + String(UserModeControl::getInstance().humanDetection));
 }
 
-void processUserMode(const JsonObject &data) {
-    Serial.println("processUserMode");
+void processConfig(const JsonObject &data) {
+    SERIAL_PRINTLN("processConfig");
 
     EOperationMode oldOperationMode = UserModeControl::getInstance().operationMode;
     EOperationMode newOperationMode = Util::stringToEOperationMode(data["operationMode"]);
@@ -210,8 +216,9 @@ void processUserMode(const JsonObject &data) {
 
     auto *dataA = new AudioMsgData();
     dataA->list = Playlist();
-    dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
+    dataA->events = EAudioMQEvent::UPDATE_CONFIG;
     dataA->isShuffle = data["soundShuffle"];
+    dataA->volume = data["volume"];
 
     AudioTask::getInstance().sendMsg(dataA);
 
@@ -220,15 +227,6 @@ void processUserMode(const JsonObject &data) {
             handleInteractionMode();
         }
     }
-}
-
-void processDeviceConfig(const JsonObject &data) {
-    auto *dataA = new AudioMsgData();
-    dataA->list = Playlist();
-    dataA->events = EAudioMQEvent::UPDATE_VOLUME_SHUFFLE;
-    dataA->volume = data["volume"];
-
-    AudioTask::getInstance().sendMsg(dataA);
 }
 
 void processPlayList(const JsonObject &data) {
@@ -339,17 +337,17 @@ bool connectWifi() {
     if (ssid.length() != 0) {
         String status = WifiModule::getInstance().connectWifi(ssid, psk);
 
-        Serial.print("connectWifi : ssid : ");
-        Serial.println(ssid);
-        Serial.print("connectWifi : password : ");
-        Serial.println(psk);
+        SERIAL_PRINT("connectWifi : ssid : ");
+        SERIAL_PRINTLN(ssid);
+        SERIAL_PRINT("connectWifi : password : ");
+        SERIAL_PRINTLN(psk);
 
         if (status != "WL_CONNECTED") {
-            Serial.println("connectWifi : wifi connect fail");
+            SERIAL_PRINTLN("connectWifi : wifi connect fail");
             return false;
         }
 
-        Serial.println("connectWifi : wifi connect");
+        SERIAL_PRINTLN("connectWifi : wifi connect");
         return true;
     }
     else {
@@ -376,8 +374,8 @@ void receiveWifi() {
         SDUtil::authenticationToken_ = String(doc["token"]);
         EepromControl::getInstance().setWifiPsk(doc["ssid"], doc["password"]);
 
-        Serial.println("receiveWifi : " + EepromControl::getInstance().getWifiSsid());
-        Serial.println("receiveWifi : " + EepromControl::getInstance().getWifiPsk());
+        SERIAL_PRINTLN("receiveWifi : " + EepromControl::getInstance().getWifiSsid());
+        SERIAL_PRINTLN("receiveWifi : " + EepromControl::getInstance().getWifiPsk());
 
         bool status = false;
 
@@ -428,7 +426,7 @@ void receiveSerial() {
         serializeJson(doc, strPayload);
 
         EepromControl::getInstance().setSerial(doc["serial"]);
-        Serial.println("receiveSerial : serial : " + EepromControl::getInstance().getSerial());
+        SERIAL_PRINTLN("receiveSerial : serial : " + EepromControl::getInstance().getSerial());
 
         webServer.send(200);
     }
@@ -440,14 +438,14 @@ void receiveSerial() {
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
-    EepromControl::getInstance().setSerial("Kira_Mirror_00001");
-    EepromControl::getInstance().setWifiPsk("", "");
+//    EepromControl::getInstance().setSerial("KIRA_Mirror_00001");
+//    EepromControl::getInstance().setWifiPsk("", "");
 
     SDUtil::getInstance().init();
     WiFiClass::mode(WIFI_MODE_STA);
-    Serial.println("setup : SERIAL : " + EepromControl::getInstance().getSerial());
-    Serial.println("setup : SSID : " + EepromControl::getInstance().getWifiSsid());
-    Serial.println("setup : PSK : " + EepromControl::getInstance().getWifiPsk());
+    SERIAL_PRINTLN("setup : SERIAL : " + EepromControl::getInstance().getSerial());
+    SERIAL_PRINTLN("setup : SSID : " + EepromControl::getInstance().getWifiSsid());
+    SERIAL_PRINTLN("setup : PSK : " + EepromControl::getInstance().getWifiPsk());
 
     WifiModule::getInstance().setIp("192.168.0.1", "192.168.0.1", "255.255.255.0");
     WifiModule::getInstance().setApInfo(EepromControl::getInstance().getSerial());
@@ -460,11 +458,11 @@ void setup() {
     wsClient.setPort(port);
     wsClient.setWithSsl(ssl);
     wsClient.onConnected([&](uint8_t *payload, size_t length) {
-        Serial.println("onConnected : websocket connected");
+        SERIAL_PRINTLN("onConnected : websocket connected");
 
         DynamicJsonDocument doc(512);
         JsonObject json = doc.to<JsonObject>();
-        json["event"] = "registerDeviceSession";
+        json["event"] = "RegisterDeviceSession";
         json["name"] = EepromControl::getInstance().getSerial();
         json["type"] = "Mirror";
         json["ledCount"] = NeoPixelTask::getInstance().getLedCount();
@@ -476,22 +474,21 @@ void setup() {
         wsClient.sendText(strJson);
     });
     wsClient.onDisconnected([&](uint8_t *payload, size_t length) {
-        Serial.println("onDisconnected : websocket disconnected");
+        SERIAL_PRINTLN("onDisconnected : websocket disconnected");
     });
     wsClient.onTextMessageReceived([&](uint8_t *payload, size_t length) {
         DynamicJsonDocument doc(length * 2);
         deserializeJson(doc, payload, length);
 
-        if (doc["event"] != "SendHumanDetection") {
-            String strJson;
-            serializeJson(doc, strJson);
-            Serial.println("onTextMessageReceived : " + strJson);
-        }
+        String strJson;
+        serializeJson(doc, strJson);
+        SERIAL_PRINTLN("onTextMessageReceived : " + strJson);
 
         if (doc.containsKey("authenticationToken")) {
             String token = String(doc["authenticationToken"]);
 
             if (token.isEmpty()) {
+                disableAllTask();
                 wsClient.disconnect();
                 EepromControl::getInstance().setWifiPsk("", "");
                 WifiModule::getInstance().start();
@@ -510,11 +507,8 @@ void setup() {
         else if (doc["event"] == "SendPlaylist") {
             processPlayList(doc["data"]);
         }
-        else if (doc["event"] == "SendUserMode") {
-            processUserMode(doc["data"]);
-        }
-        else if (doc["event"] == "SendConfig") {
-            processDeviceConfig(doc["data"]);
+        else if (doc["event"] == "SendMirrorConfig") {
+            processConfig(doc["data"]);
         }
         else if (doc["event"] == "SendHumanDetection") {
             processHumanDetection(doc["data"]);
@@ -530,11 +524,6 @@ void setup() {
         processPing();
     });
 
-
-//    xTaskCreatePinnedToCore([](void *param) {
-//        while (1) { NeoPixelTask::getInstance().task(); }
-//        vTaskDelete(nullptr);
-//    }, "neoPixelTask", 5000, nullptr, 0, nullptr, 0);
     xTaskCreatePinnedToCore([](void *param) {
         while (1) { PingPongTask::getInstance().task(); }
         vTaskDelete(nullptr);
@@ -559,6 +548,7 @@ void handleAudioFileMsg(bool status, AudioFileMsgData *msg) {
 void loop() {
     webServer.handleClient();
     wsClient.loop();
+    NeoPixelTask::getInstance().task();
 
     if (WifiModule::getInstance().isConnectedST() && !isConnectToWifiWithAPI) {
         AudioFileMsgData *msg = audioFileMsgQueue.recv();
@@ -568,7 +558,7 @@ void loop() {
                 String protocol = ssl ? "https://" : "http://";
                 int id = msg->id;
                 String filename = msg->filename;
-                String url = protocol + host + ":" + port + "/api/sound/file/";
+                String url = protocol + host + ":" + port + "/api/sound/device/" + EepromControl::getInstance().getSerial() + "/file/";
 
                 bool status = SDUtil::downloadFile(url, id, filename);
 
@@ -582,7 +572,20 @@ void loop() {
             }
         }
 
-        NeoPixelTask::getInstance().task();
+        ToServerMsgData *toServerMsg = ToServerMsgQueue::getInstance().recv();
+        if (toServerMsg != nullptr) {
+            DynamicJsonDocument doc(512);
+            JsonObject json = doc.to<JsonObject>();
+            json["event"] = "FinishCycle";
+            json["name"] = EepromControl::getInstance().getSerial();
+
+            String strJson;
+            serializeJson(json, strJson);
+
+            wsClient.sendText(strJson);
+
+            delete toServerMsg;
+        }
     }
     else {
         if (wifiConnectCount < 5) {
@@ -593,7 +596,7 @@ void loop() {
             }
             else {
                 wifiConnectCount += 1;
-                Serial.println("loop : wifiConnectCount : " + String(wifiConnectCount));
+                SERIAL_PRINTLN("loop : wifiConnectCount : " + String(wifiConnectCount));
 
                 if (wifiConnectCount == 5) {
                     WifiModule::getInstance().start();

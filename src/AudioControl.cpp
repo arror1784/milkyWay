@@ -7,8 +7,10 @@ AudioControl::AudioControl(int lrcPin, int blckPin, int doutPin)
 //    _audio.forceMono(true);
 }
 
-void AudioControl::setVolume(uint8_t volume) {
+bool AudioControl::setVolume(uint8_t volume) {
+    auto previousVolume = _audio.getVolume();
     _audio.setVolume(volume);
+    return previousVolume != volume;
 }
 
 bool AudioControl::setPlayList(Playlist &list) {
@@ -33,6 +35,7 @@ bool AudioControl::setPlayList(Playlist &list) {
     if (isSamePlaylist) return false;
 
     _playList = list;
+    _listIndex = (int) list.sounds.size() - 1;
 
     return true;
 }
@@ -40,7 +43,7 @@ bool AudioControl::setPlayList(Playlist &list) {
 void AudioControl::pause() {
     if (!isValidPlaylist()) return;
     if (_isResume) {
-        Serial.println("AudioControl::pause : pause");
+        SERIAL_PRINTLN("AudioControl::pause : pause");
         _isResume = false;
         _audio.pauseResume();
     }
@@ -49,14 +52,15 @@ void AudioControl::pause() {
 void AudioControl::resume() {
     if (!isValidPlaylist()) return;
     if (!_isResume) {
-        Serial.println("AudioControl::resume : resume");
+        SERIAL_PRINTLN("AudioControl::resume : resume");
         _isResume = true;
         _audio.pauseResume();
     }
 };
 
 void AudioControl::updatePlaylistIndex() {
-    Serial.println("AudioControl::updatePlaylistIndex : updatePlaylistIndex");
+    SERIAL_PRINTLN("AudioControl::updatePlaylistIndex : updatePlaylistIndex");
+    SERIAL_PRINTLN("AudioControl::updatePlaylistIndex : _isShuffle : " + String(_isShuffle));
     if (_isShuffle) {
         _listIndex = random((long) _playList.sounds.size());
     }
@@ -64,6 +68,7 @@ void AudioControl::updatePlaylistIndex() {
         _listIndex++;
         if (_listIndex >= _playList.sounds.size()) _listIndex = 0;
     }
+    SERIAL_PRINTLN("AudioControl::updatePlaylistIndex : _listIndex : " + String(_listIndex));
 }
 
 void AudioControl::play() {
@@ -71,7 +76,7 @@ void AudioControl::play() {
 
     if (!isValidPlaylist()) return;
 
-    Serial.println("AudioControl::play : play");
+    SERIAL_PRINTLN("AudioControl::play : play");
     _isResume = true;
     updatePlaylistIndex();
     _audio.connecttoFS(SD, String("/" + _playList.sounds[_listIndex].filename).c_str());
@@ -105,6 +110,8 @@ bool AudioControl::isValidPlaylist() {
     return !_playList.sounds.empty();
 }
 
-void AudioControl::setIsShuffle(bool isShuffle) {
+bool AudioControl::setIsShuffle(bool isShuffle) {
+    auto previousIsShuffle = _isShuffle;
     _isShuffle = isShuffle;
+    return previousIsShuffle != isShuffle;
 }

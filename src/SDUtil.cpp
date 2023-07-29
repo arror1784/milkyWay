@@ -16,7 +16,7 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
     String parsedFileName = String(filename);
     String url = api + Util::encodeUrl(parsedFileName);
 
-    Serial.println(url);
+    SERIAL_PRINTLN(url);
 
     HTTPClient httpClient;
     httpClient.begin(url);
@@ -32,15 +32,15 @@ bool SDUtil::downloadFile(const String &api, int id, const String &filename) {
         file.close();
         httpClient.end();
         if (status < 0) {
-            Serial.println("http writeToStream fail : " + String(status));
+            SERIAL_PRINTLN("http writeToStream fail : " + String(status));
             return false;
         }
 
-        Serial.println("download file finish : " + String(status));
+        SERIAL_PRINTLN("download file finish : " + String(status));
 
         return true;
     }
-    Serial.println("http get fail : " + String(httpCode));
+    SERIAL_PRINTLN("http get fail : " + String(httpCode));
     httpClient.end();
 
     return false;
@@ -55,7 +55,7 @@ bool SDUtil::writeFile(const String &path, const String &data) {
 String SDUtil::readFile(const String &path) {
     File file = SD.open(path);
     if (!file || file.isDirectory()) {
-        Serial.println("− failed to open file for reading");
+        SERIAL_PRINTLN("− failed to open file for reading");
         return "";
     }
     String res = file.readString();
@@ -64,32 +64,32 @@ String SDUtil::readFile(const String &path) {
 }
 
 void SDUtil::listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
-    Serial.printf("Listing directory: %s\n", dirname);
+    SERIAL_PRINT(String("Listing directory: ") + dirname);
 
     File root = fs.open(dirname);
     if (!root) {
-        Serial.println("Failed to open directory");
+        SERIAL_PRINTLN("Failed to open directory");
         return;
     }
     if (!root.isDirectory()) {
-        Serial.println("Not a directory");
+        SERIAL_PRINTLN("Not a directory");
         return;
     }
 
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
-            Serial.print("  DIR : ");
-            Serial.println(file.name());
+            SERIAL_PRINT("  DIR : ");
+            SERIAL_PRINTLN(file.name());
             if (levels) {
                 listDir(fs, file.name(), levels - 1);
             }
         }
         else {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("  SIZE: ");
-            Serial.println(file.size());
+            SERIAL_PRINT("  FILE: ");
+            SERIAL_PRINT(file.name());
+            SERIAL_PRINT("  SIZE: ");
+            SERIAL_PRINTLN(file.size());
         }
         file = root.openNextFile();
     }

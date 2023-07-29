@@ -8,6 +8,7 @@
 #include <WiFi.h>
 #include <IPAddress.h>
 
+#include "SerialPrint.h"
 #include "Singleton.h"
 #include "Util.h"
 

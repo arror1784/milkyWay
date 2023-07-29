@@ -47,8 +47,9 @@ EDeviceType Util::stringToEDeviceType(const String &string) {
 EInteractionMode Util::stringToEInteractionMode(const String &string) {
     if (string.compareTo("LightOnly") == 0) return EInteractionMode::LightOnly;
     else if (string.compareTo("SoundOnly") == 0) return EInteractionMode::SoundOnly;
-    else if (string.compareTo("Shuffle") == 0) return EInteractionMode::PingPong;
-    return EInteractionMode::Synchronization;
+    else if (string.compareTo("PingPong") == 0) return EInteractionMode::PingPong;
+    else if (string.compareTo("Synchronization") == 0) return EInteractionMode::Synchronization;
+    return EInteractionMode::N;
 }
 
 EOperationMode Util::stringToEOperationMode(const String &string) {

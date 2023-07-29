@@ -1,6 +1,7 @@
 #ifndef MILKYWAY_NEOPIXEL_TASK_H
 #define MILKYWAY_NEOPIXEL_TASK_H
 
+#include "SerialPrint.h"
 #include "PingPongMsgQueue.h"
 #include "NeoPixelMsgQueue.h"
 #include "NeoPixel.h"

@@ -1,4 +1,5 @@
 #include "AudioTask.h"
+#include "ToServerMsgQueue.h"
 
 AudioTask::AudioTask() : _audioControl(I2S_LRC, I2S_BCLK, I2S_DOUT), _msgQueue(30) {
     _audioControl.setVolume(_volume);
@@ -17,27 +18,26 @@ void AudioTask::task() {
         return;
     }
     if (msg != nullptr) {
-        if (msg->events == EAudioMQEvent::UPDATE_VOLUME_SHUFFLE) {
-            Serial.println("AudioTask::task : EAudioMQEvent::UPDATE_VOLUME_SHUFFLE");
-            if(msg->volume > -1) _audioControl.setVolume(msg->volume);
-            else                 _audioControl.setIsShuffle(msg->isShuffle);
-            handlePlayStatus(true);
+        if (msg->events == EAudioMQEvent::UPDATE_CONFIG) {
+            SERIAL_PRINTLN("AudioTask::task : EAudioMQEvent::UPDATE_CONFIG");
+            this->setConfig(msg->volume, msg->isShuffle);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_PLAYLIST) {
-            Serial.println("AudioTask::task : EAudioMQEvent::UPDATE_PLAYLIST");
             bool status = _audioControl.setPlayList(msg->list);
+            SERIAL_PRINTLN("AudioTask::task : EAudioMQEvent::UPDATE_PLAYLIST : " + String(status));
             if (status) {
                 _shouldChangeSound = true;
+                handlePlayStatus(status);
             }
-            handlePlayStatus(status);
         }
         else if (msg->events == EAudioMQEvent::UPDATE_ENABLE) {
-            Serial.println("AudioTask::task : EAudioMQEvent::UPDATE_ENABLE" + String(msg->enable));
+            SERIAL_PRINTLN("AudioTask::task : EAudioMQEvent::UPDATE_ENABLE" + String(msg->enable));
             _isEnabled = msg->enable;
             handlePlayStatus(true);
+            _cycleTick = _isEnabled ? xTaskGetTickCount() : 0;
         }
         else if (msg->events == EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND) {
-            Serial.println("AudioTask::task : EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
+            SERIAL_PRINTLN("AudioTask::task : EAudioMQEvent::UPDATE_DELETE_CURRENT_SOUND");
             _audioControl.pause();
             _shouldChangeSound = true;
         }
@@ -71,6 +71,13 @@ void AudioTask::task() {
             NeoPixelTask::getInstance().sendSyncMsg(dataN);
         }
     }
+
+    if (_isEnabled && pdTICKS_TO_MS(xTaskGetTickCount() - _cycleTick) > 7000) {
+        SERIAL_PRINTLN("AudioTask::task : send to server");
+        _cycleTick = xTaskGetTickCount();
+        auto *data = new ToServerMsgData();
+        ToServerMsgQueue::getInstance().send(data);
+    }
 }
 
 void AudioTask::setIsSDAccessing(bool isSDAccessing) {
@@ -78,22 +85,26 @@ void AudioTask::setIsSDAccessing(bool isSDAccessing) {
 }
 
 void AudioTask::handlePlayStatus(bool status) {
-    Serial.println("AudioTask::handlePlayStatus : AudioTask::task : handlePlayStatus");
     if (_isEnabled && status) {
         if (!_shouldChangeSound) {
-            Serial.println("AudioTask::handlePlayStatus : resume run");
+            SERIAL_PRINTLN("AudioTask::handlePlayStatus : resume run");
             _audioControl.resume();
         }
         else {
-            Serial.println("AudioTask::handlePlayStatus : play run");
+            SERIAL_PRINTLN("AudioTask::handlePlayStatus : play run");
             _shouldChangeSound = false;
             _audioControl.play();
         }
     }
     else {
-        Serial.println("AudioTask::handlePlayStatus : pause run");
+        SERIAL_PRINTLN("AudioTask::handlePlayStatus : pause run");
         _audioControl.pause();
     }
+}
+
+void AudioTask::setConfig(int volume, bool isShuffle) {
+    _audioControl.setVolume(volume);
+    _audioControl.setIsShuffle(isShuffle);
 }
 
 const Sound &AudioTask::getCurrentSound() {
@@ -105,13 +116,13 @@ void AudioTask::setShouldChangeSound(bool shouldChangeSound) {
 }
 
 void audio_info(const char *info) {
-//    Serial.print("info        ");
-//    Serial.println(info);
+    SERIAL_PRINT("info        ");
+    SERIAL_PRINTLN(info);
 }
 
 void audio_eof_mp3(const char *info) {  //end of file
-//    Serial.print("eof_mp3     ");
-//    Serial.println(info);
+    SERIAL_PRINT("eof_mp3     ");
+    SERIAL_PRINTLN(info);
     AudioTask::getInstance().setShouldChangeSound(true);
     AudioTask::getInstance().handlePlayStatus(true);
 }
