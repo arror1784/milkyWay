@@ -435,6 +435,15 @@ void receiveSerial() {
     }
 }
 
+void resetAll() {
+    disableAllTask();
+    wsClient.disconnect();
+    EepromControl::getInstance().setWifiPsk("", "");
+    WifiModule::getInstance().disconnectWifi();
+    WifiModule::getInstance().start();
+    SDUtil::authenticationToken_ = "";
+}
+
 void setup() {
     Serial.begin(115200);
     EepromControl::getInstance().init();
@@ -488,11 +497,7 @@ void setup() {
             String token = String(doc["authenticationToken"]);
 
             if (token.isEmpty()) {
-                disableAllTask();
-                wsClient.disconnect();
-                EepromControl::getInstance().setWifiPsk("", "");
-                WifiModule::getInstance().start();
-
+                resetAll();
                 return;
             }
 
@@ -518,6 +523,9 @@ void setup() {
         }
         else if (doc["event"] == "SendDeletedSound") {
             processSendDeletedSound(doc["data"]);
+        }
+        else if (doc["event"] == "SendReset") {
+            resetAll();
         }
     });
     wsClient.onPingMessageReceived([&](uint8_t *payload, size_t length) {
